@@ -5,13 +5,24 @@ const useResultStore = create(
   devtools(
     persist(
       (set) => ({
-        // ✅ STATE (defined once)
-        result: null,
+        employabilityIndex: null,
+        aptitudeScore: null,
+        readinessBreakdown: null,
+        generatedAt: null,
 
-        // ✅ ACTIONS
-        setResult: (data) => set({ result: data }),
+        setResults: (results) =>
+          set({
+            ...results,
+            generatedAt: new Date().toISOString(),
+          }),
 
-        resetResult: () => set({ result: null }),
+        resetResults: () =>
+          set({
+            employabilityIndex: null,
+            aptitudeScore: null,
+            readinessBreakdown: null,
+            generatedAt: null,
+          }),
       }),
       {
         name: "skillvista-result", // localStorage key

@@ -1,7 +1,8 @@
 // components/dashboard/Sidebar.tsx
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
+import Image from "next/image";
+import { useAssessmentStore } from "@/store/useAssessmentStore";
 const navItems = [
   { label: "Overview", active: true },
   { label: "Assessments", active: false },
@@ -11,17 +12,27 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const basicDetails = useAssessmentStore((s) => s.basicDetails);
+  console.log(basicDetails);
   return (
     <aside className="hidden lg:flex w-65 bg-card border-r border-border p-6 flex-col">
       {/* PROFILE CARD */}
+
       <div className="mb-8">
         <div className="rounded-xl border border-border bg-muted p-4 flex items-center gap-3">
-          <div className="size-10 rounded-md bg-background border border-border" />
+          {/* Profile Image */}
+          <div className="relative size-10 rounded-md overflow-hidden border border-border bg-background">
+              <Image
+                src="/download.jpeg"
+                alt="Candidate profile"
+                fill
+                className="object-cover"
+              />
+          </div>
+
+          {/* Text */}
           <div>
-            <p className="text-xs font-semibold">Candidate Profile</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Employability Level 2
-            </p>
+            <p className="text-xs font-semibold">{basicDetails.name}</p>
           </div>
         </div>
       </div>
@@ -42,9 +53,6 @@ export default function Sidebar() {
           </Button>
         ))}
       </nav>
-
-
-     
     </aside>
   );
 }

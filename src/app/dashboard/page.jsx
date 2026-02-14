@@ -2,7 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
 
 import Header from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -14,12 +15,14 @@ import CriticalSkillGaps from "@/components/dashboard/CriticalSkillGap";
 import HiringReadiness from "@/components/dashboard/HiringReadiness";
 
 import RevealOnScroll from "@/components/common/RevealOnScroll";
-import { syncAssessmentToBackend } from "@/lib/syncAssessment";
+import { useAssessmentStore } from "@/store/useAssessmentStore";
 import useResultStore from "@/store/useResultStore";
+import { Button } from "@/components/ui/button";
 
 export default function Page() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   //  Redirect unauthenticated users
   useEffect(() => {
@@ -28,15 +31,34 @@ export default function Page() {
     }
   }, [status, router]);
 
-  //  Prevent multiple syncs
-  const hasSyncedRef = useRef(false);
+  const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
+  const setResults = useResultStore((s) => s.setResults);
 
   useEffect(() => {
-    if (status === "authenticated" && session && !hasSyncedRef.current) {
-      hasSyncedRef.current = true;
-      syncAssessmentToBackend();
-    }
-  }, [status, session]);
+    if (status !== "authenticated") return;
+
+    const hydrate = async () => {
+      // Load assessment data
+      const assessmentRes = await fetch("/api/assessment/me");
+      if (assessmentRes.ok) {
+        const assessmentData = await assessmentRes.json();
+        if (assessmentData.assessment?.basicDetails) {
+          setBasicDetails(assessmentData.assessment.basicDetails);
+        }
+      }
+
+      // Load results data
+      const resultsRes = await fetch("/api/results/me");
+      if (resultsRes.ok) {
+        const resultsData = await resultsRes.json();
+        if (resultsData && Object.keys(resultsData).length > 0) {
+          setResults(resultsData);
+        }
+      }
+    };
+
+    hydrate();
+  }, [status, setBasicDetails, setResults]);
 
   const result = useResultStore((state) => state.result);
 
@@ -51,17 +73,31 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      {/* ===== MOBILE TOP BAR ===== */}
+      <div className="flex items-center justify-between lg:hidden px-4 py-3 bg-card border-b border-border">
+        <h1 className="text-sm font-semibold">Dashboard</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </Button>
+      </div>
+
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <main className="flex-1 overflow-y-auto p-10">
-          <div className="max-w-6xl mx-auto space-y-12">
+        {/* ===== MAIN CONTENT ===== */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 lg:px-10">
             {/* ===== ROW 1: OVERVIEW ===== */}
-            <div className="grid grid-cols-12 gap-8">
-              <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start mb-16 mt-14 lg:mb-24">
+              {/* LEFT COLUMN */}
+              <div className="col-span-12 lg:col-span-4 flex flex-col gap-6 self-start">
                 <RevealOnScroll>
                   <EmployabilityIndex />
                 </RevealOnScroll>
@@ -71,7 +107,8 @@ export default function Page() {
                 </RevealOnScroll>
               </div>
 
-              <div className="col-span-12 lg:col-span-8 mt-10">
+              {/* RIGHT COLUMN */}
+              <div className="col-span-12 lg:col-span-8 self-start">
                 <RevealOnScroll delay={0.1}>
                   <SkillAptitudeRadar />
                 </RevealOnScroll>
@@ -79,7 +116,7 @@ export default function Page() {
             </div>
 
             {/* ===== ROW 2: ANALYSIS ===== */}
-            <div className="grid grid-cols-12 gap-8">
+            <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
               <div className="col-span-12 lg:col-span-5">
                 <RevealOnScroll delay={0.15}>
                   <CriticalSkillGaps />
@@ -97,4 +134,5 @@ export default function Page() {
       </div>
     </div>
   );
+
 }

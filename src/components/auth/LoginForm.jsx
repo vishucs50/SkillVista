@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 
 const LoginForm = () => {
   const router = useRouter();
-  const { status } = useSession();
+  const { status } = useSession(); // kept only for loading state
 
   const {
     register,
@@ -29,12 +29,7 @@ const LoginForm = () => {
     formState: { errors },
   } = useForm();
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard");
-    }
-  }, [status, router]);
-
+  /* ---------- CREDENTIALS LOGIN ---------- */
   const onSubmit = async ({ email, password }) => {
     const res = await signIn("credentials", {
       email,
@@ -70,12 +65,16 @@ const LoginForm = () => {
         </CardHeader>
 
         <CardContent className="space-y-5">
-          {/* GOOGLE LOGIN */}
+          {/* ---------- GOOGLE LOGIN ---------- */}
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               variant="outline"
               className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 flex items-center justify-center gap-3"
-              onClick={() => signIn("google")}
+              onClick={() =>
+                signIn("google", {
+                  callbackUrl: "/auth/redirect",
+                })
+              }
             >
               <FcGoogle className="h-5 w-5" />
               <span>Continue with Google</span>
@@ -84,7 +83,7 @@ const LoginForm = () => {
 
           <Separator className="bg-zinc-700" />
 
-          {/* FORM */}
+          {/* ---------- FORM ---------- */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <Label className="text-zinc-300 mb-2">Email</Label>

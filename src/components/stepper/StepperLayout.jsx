@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import StepperHeader from "./StepperHeader";
 import BasicDetails from "./steps/BasicDetails";
@@ -11,10 +12,9 @@ import SkillInventory from "./steps/SkillInventory";
 import AptitudeTest from "./steps/AptitudeTest";
 import ExperienceReadiness from "./steps/ExperienceReadiness";
 import ReviewConfirm from "./steps/ReviewConfirm";
-
 import { useAssessmentStore } from "@/store/useAssessmentStore";
 import useResultStore from "@/store/useResultStore";
-import { calculateResults } from "@/lib/calculateResults";
+import { calculateResults } from "@/lib/gemini/calculateResults";
 import Header from "../dashboard/Header";
 
 const TOTAL_STEPS = 6;
@@ -23,9 +23,13 @@ export default function StepperLayout() {
   const [currentStep, setCurrentStep] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const assessment = useAssessmentStore();
   const setResults = useResultStore((s) => s.setResults);
+  const resetAll = useAssessmentStore((s) => s.resetAll);
+  const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
+  const setAptitudeAnswers = useAssessmentStore((s) => s.setAptitudeAnswers);
 
   const finishAssessment = () => {
     const results = calculateResults(assessment);
@@ -34,6 +38,38 @@ export default function StepperLayout() {
     localStorage.removeItem("skillvista-step");
     router.replace("/dashboard");
   };
+
+  /* ===== LOAD USER'S ASSESSMENT DATA ===== */
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const loadAssessmentData = async () => {
+      try {
+        const res = await fetch("/api/assessment/me");
+        const data = await res.json();
+
+        if (data.assessment) {
+          // User has existing assessment data, load it
+          if (data.assessment.basicDetails) {
+            setBasicDetails(data.assessment.basicDetails);
+          }
+          if (data.assessment.aptitudeAnswers) {
+            setAptitudeAnswers(data.assessment.aptitudeAnswers);
+          }
+        } else {
+          // New user, reset the store
+          resetAll();
+          localStorage.removeItem("skillvista-assessment");
+        }
+      } catch (error) {
+        console.error("Failed to load assessment data:", error);
+        resetAll();
+        localStorage.removeItem("skillvista-assessment");
+      }
+    };
+
+    loadAssessmentData();
+  }, [session?.user?.id, setBasicDetails, setAptitudeAnswers, resetAll]);
 
   /* ===== HYDRATION ===== */
   useEffect(() => {

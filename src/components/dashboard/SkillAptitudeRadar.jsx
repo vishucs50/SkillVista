@@ -2,26 +2,32 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import useResultStore from "@/store/useResultStore";
 
 function getDotColor(value) {
-  if (value >= 70) return "#22c55e"; // green
-  if (value >= 40) return "#facc15"; // amber
-  return "#ef4444"; // red
+  if (value >= 70) return "#22c55e";
+  if (value >= 40) return "#facc15";
+  return "#ef4444";
 }
 
 export default function SkillAptitudeRadar() {
-  const aptitudeScore = useResultStore((s) => s.aptitude?.score ?? 60);
-  const skillsCount = useResultStore(
-    (s) => s.basicDetails?.skills?.length ?? 3,
-  );
+  const readiness = useResultStore((s) => s.readinessBreakdown);
+
+  const skillsValue = readiness?.skills ?? 0;
+  const aptitudeScore = readiness?.aptitude ?? 0;
+  const experience = readiness?.experience ?? 0;
+  const consistency = readiness?.consistency ?? 0;
+
+  const [hovered, setHovered] = useState(null);
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
 
   const values = {
-    technical: Math.min(skillsCount * 15, 100),
+    technical: skillsValue,
     logic: aptitudeScore,
-    quantitative: aptitudeScore * 0.9,
-    communication: 55,
-    problemSolving: aptitudeScore * 0.95,
+    quantitative: consistency,
+    communication: experience,
+    problemSolving: Math.round((skillsValue + aptitudeScore) / 2),
   };
 
   const scale = (v) => (v / 100) * 160;
@@ -34,7 +40,7 @@ export default function SkillAptitudeRadar() {
       y: 200 - scale(values.technical),
     },
     {
-      label: "Logical Reasoning",
+      label: "Reasoning",
       value: values.logic,
       x: 200 + scale(values.logic),
       y: 200,
@@ -73,8 +79,18 @@ export default function SkillAptitudeRadar() {
       </CardHeader>
 
       <CardContent className="flex justify-center items-center min-h-105">
-        <svg viewBox="-60 0 487  400" className="w-full max-w-lg">
-          {/* Grid */}
+        <svg
+          viewBox="-60 0 487 400"
+          className="w-full max-w-lg"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setCursor({
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            });
+          }}
+        >
+          {/* GRID */}
           {[40, 80, 120, 160].map((r) => (
             <circle
               key={r}
@@ -87,13 +103,13 @@ export default function SkillAptitudeRadar() {
             />
           ))}
 
-          {/* Axes */}
+          {/* AXES */}
           <line x1="200" y1="40" x2="200" y2="360" stroke="#2a2a2a" />
           <line x1="40" y1="200" x2="360" y2="200" stroke="#2a2a2a" />
           <line x1="90" y1="90" x2="310" y2="310" stroke="#2a2a2a" />
           <line x1="310" y1="90" x2="90" y2="310" stroke="#2a2a2a" />
 
-          {/* Radar line */}
+          {/* FLOATING RADAR SHAPE */}
           <motion.path
             d={path}
             fill="none"
@@ -103,25 +119,64 @@ export default function SkillAptitudeRadar() {
             strokeLinecap="round"
             strokeLinejoin="round"
             initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
+            animate={{ pathLength: 1, y: [0, -2, 0] }}
             transition={{ duration: 0.9, ease: "easeOut" }}
           />
 
-          {/* Color-coded dots */}
+          {/* INTERACTIVE DOTS */}
           {points.map((p, idx) => (
-            <motion.circle
-              key={idx}
-              cx={p.x}
-              cy={p.y}
-              r="4.5"
-              fill={getDotColor(p.value)}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5 + idx * 0.05 }}
-            />
+            <g key={idx}>
+              {/* Glow Ring */}
+              <motion.circle
+                cx={p.x}
+                cy={p.y}
+                r={hovered?.label === p.label ? 12 : 0}
+                fill={getDotColor(p.value)}
+                opacity="0.15"
+                animate={{ r: hovered?.label === p.label ? 12 : 0 }}
+                transition={{ duration: 0.2 }}
+              />
+
+              {/* Main Dot */}
+              <motion.circle
+                cx={p.x}
+                cy={p.y}
+                r={hovered?.label === p.label ? 7 : 4.5}
+                fill={getDotColor(p.value)}
+                className="cursor-pointer"
+                onMouseEnter={() => setHovered(p)}
+                onMouseLeave={() => setHovered(null)}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.5 + idx * 0.05 }}
+              />
+            </g>
           ))}
 
-          {/* Labels */}
+          {/* CURSOR FOLLOW TOOLTIP */}
+          {hovered && (
+            <g style={{ pointerEvents: "none" }}>
+              <rect
+                x={cursor.x - 70}
+                y={cursor.y - 40}
+                width="140"
+                height="30"
+                rx="8"
+                fill="#111"
+                opacity="0.9"
+              />
+              <text
+                x={cursor.x}
+                y={cursor.y - 20}
+                textAnchor="middle"
+                className="fill-white text-xs"
+              >
+                {hovered.label}: {hovered.value}%
+              </text>
+            </g>
+          )}
+
+          {/* LABELS */}
           <text
             x="200"
             y="28"

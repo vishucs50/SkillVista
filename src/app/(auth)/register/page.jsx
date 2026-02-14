@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import RegisterForm from "@/components/auth/RegisterForm";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 /* === SKILL PARTICLE === */
 const SkillParticle = ({ label, startX, startY, delay }) => (
@@ -27,30 +28,40 @@ const RadarRing = () => (
 
 export default function LoginPage() {
   const [progress, setProgress] = useState(0);
+  const [rotate3D, setRotate3D] = useState(false);
+  const [showLogo, setShowLogo] = useState(false);
 
   useEffect(() => {
     let p = 0;
     const interval = setInterval(() => {
       p += 1;
-      if (p > 82) return clearInterval(interval);
+      if (p > 82) {
+        clearInterval(interval);
+
+        setTimeout(() => setRotate3D(true), 500); // start 3D spin
+        setTimeout(() => setShowLogo(true), 1700); // show logo mid-spin
+        return;
+      }
       setProgress(p);
     }, 25);
+
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="relative min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-slate-950 overflow-hidden">
-      {/* ===== LEFT: JOB ROLE TARGET VISUAL ===== */}
+      {/* ===== LEFT VISUAL ===== */}
       <div className="hidden lg:flex items-center justify-center relative">
-        {/* Ambient Glow */}
         <div className="absolute w-[420px] h-[420px] rounded-full bg-cyan-500/20 blur-3xl" />
 
-        {/* Target Container */}
-        <div className="relative w-[320px] h-[320px] flex items-center justify-center">
+        {/* PERSPECTIVE WRAPPER */}
+        <div
+          className="relative w-[320px] h-[320px] flex items-center justify-center"
+          style={{ perspective: 1000 }}
+        >
           <RadarRing />
           <RadarRing />
 
-          {/* Skills flowing into target */}
           <SkillParticle label="HTML" startX={-160} startY={-80} delay={0.2} />
           <SkillParticle label="CSS" startX={-120} startY={120} delay={0.4} />
           <SkillParticle
@@ -62,17 +73,55 @@ export default function LoginPage() {
           <SkillParticle label="React" startX={160} startY={60} delay={0.8} />
           <SkillParticle label="Node.js" startX={0} startY={-160} delay={1} />
 
-          {/* TARGET ROLE */}
+          {/* === TARGET / LOGO (3D ROTATION) === */}
           <motion.div
-            className="relative z-10 w-44 h-44 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 flex flex-col items-center justify-center text-black font-bold shadow-2xl"
+            className="relative z-10 w-44 h-44 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 shadow-2xl flex items-center justify-center"
+            style={{ transformStyle: "preserve-3d" }}
             initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 1.2, type: "spring" }}
+            animate={{
+              scale: 1,
+              rotateY: rotate3D ? 360 : 0,
+            }}
+            transition={{
+              scale: { delay: 1.2, type: "spring" },
+              rotateY: { duration: 1.2, ease: "easeInOut" },
+            }}
           >
-            <span className="text-sm tracking-wide">TARGET ROLE</span>
-            <span className="text-lg">Frontend Dev</span>
-            <span className="text-2xl mt-1">{progress}%</span>
-            <span className="text-xs font-medium">Job Ready</span>
+            <AnimatePresence mode="wait">
+              {!showLogo ? (
+                <motion.div
+                  key="target"
+                  className="text-black font-bold flex flex-col items-center"
+                  style={{ backfaceVisibility: "hidden" }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <span className="text-sm tracking-wide">TARGET ROLE</span>
+                  <span className="text-lg">Frontend Dev</span>
+                  <span className="text-2xl mt-1">{progress}%</span>
+                  <span className="text-xs font-medium">Job Ready</span>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="logo"
+                  className="flex items-center justify-center absolute inset-0 rounded-full overflow-hidden"
+                  style={{ backfaceVisibility: "hidden" }}
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Image
+                    src="/logo.png"
+                    alt="SkillVista Logo"
+                    fill
+                    sizes="176px"
+                    className="object-cover"
+                    priority
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
 
@@ -90,7 +139,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* ===== RIGHT: LOGIN FORM ===== */}
+      {/* ===== RIGHT LOGIN ===== */}
       <div className="flex items-center justify-center px-6 z-10">
         <RegisterForm />
       </div>

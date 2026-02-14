@@ -7,6 +7,10 @@ const UserSchema = new mongoose.Schema({
     unique: true,
   },
   password: String,
+  profileImage: {
+    type: String,
+    default: "/download.jpeg",
+  },
 });
 
 // ✅ THIS LINE FIXES THE ERROR

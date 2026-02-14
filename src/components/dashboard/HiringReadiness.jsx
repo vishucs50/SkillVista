@@ -3,7 +3,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import useResultStore from "@/store/useResultStore";
-import { useAssessmentStore } from "@/store/useAssessmentStore";
 
 function getProgressColor(value) {
   if (value >= 70) return "#22c55e"; // green
@@ -12,29 +11,26 @@ function getProgressColor(value) {
 }
 
 export default function HiringReadiness() {
-  const aptitudeScore = useResultStore((s) => s.result?.aptitude?.score ?? 0);
+  const readiness = useResultStore((s) => s.readinessBreakdown);
 
-  const skillsCount = useAssessmentStore(
-    (s) => s.basicDetails?.skills?.length ?? 0,
-  );
+  if (!readiness) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Hiring Readiness Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Generating readiness insights...
+        </CardContent>
+      </Card>
+    );
+  }
 
   const readinessData = [
-    {
-      label: "Skill Readiness",
-      value: Math.min(skillsCount * 15, 100),
-    },
-    {
-      label: "Aptitude Strength",
-      value: aptitudeScore,
-    },
-    {
-      label: "Interview Readiness",
-      value: Math.round((aptitudeScore + skillsCount * 10) / 2),
-    },
-    {
-      label: "Resume & Profile Quality",
-      value: skillsCount >= 5 ? 75 : 55,
-    },
+    { label: "Skill Progress", value: readiness.skills },
+    { label: "Aptitude Strength", value: readiness.aptitude },
+    { label: "Project Experience", value: readiness.experience },
+    { label: "Learning Consistency", value: readiness.consistency },
   ];
 
   return (
@@ -54,7 +50,6 @@ export default function HiringReadiness() {
               <span className="font-semibold">{item.value}%</span>
             </div>
 
-            {/* ✅ NO indicatorClassName here */}
             <Progress
               value={item.value}
               style={{

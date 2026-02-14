@@ -1,75 +1,68 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import useResultStore from "@/store/useResultStore";
 
-function getNextBestAction({
-  employabilityIndex,
-  aptitudeScore,
-  skillsCount,
-  hasProjects,
-}) {
-  if (aptitudeScore < 50) {
-    return {
-      title: "Strengthen Logical & Analytical Reasoning",
-      description:
-        "Your aptitude performance is currently limiting interview readiness. Improving logical reasoning will positively influence problem-solving ability and interview confidence.",
-    };
-  }
-
-  if (!hasProjects) {
-    return {
-      title: "Build End-to-End Project Experience",
-      description:
-        "Your profile shows limited practical project depth. Recruiters heavily rely on real-world projects to evaluate technical readiness.",
-    };
-  }
-
-  if (skillsCount < 5) {
-    return {
-      title: "Expand Core Technical Skill Set",
-      description:
-        "Your current skill breadth is narrow for your target role. Adding core technologies will improve profile relevance across roles.",
-    };
-  }
-
-  return {
-    title: "Prepare for Technical & HR Interviews",
-    description:
-      "Your fundamentals are in place. Focusing on interview communication and structured answers will now yield the highest impact.",
-  };
-}
-
 export default function NextBestAction() {
-  const state = useResultStore((state) => state);
+  const nextBestActions = useResultStore((state) => state.nextBestActions);
 
-  const employabilityIndex = state.employabilityIndex || 0;
-  const aptitudeScore = state.aptitude?.score || 0;
-  const skillsCount = state.basicDetails?.skills?.length || 0;
-  const hasProjects =
-    state.basicDetails?.projectExperience === "End-to-end projects";
+  const actions =
+    nextBestActions && nextBestActions.length > 0
+      ? nextBestActions
+      : [
+          "Continue strengthening your skills and experience to boost your employability.",
+        ];
 
-  const action = getNextBestAction({
-    employabilityIndex,
-    aptitudeScore,
-    skillsCount,
-    hasProjects,
-  });
+  const [index, setIndex] = useState(0);
+  const intervalRef = useRef(null);
+
+  // AUTO SLIDE EVERY 5s
+  useEffect(() => {
+    if (actions.length <= 1) return;
+
+    intervalRef.current = setInterval(() => {
+      setIndex((prev) => (prev + 1) % actions.length);
+    }, 5000);
+
+    return () => {
+      clearInterval(intervalRef.current);
+    };
+  }, [actions.length]);
+
+  // DOT CLICK
+  const goToIndex = (i) => {
+    setIndex(i);
+  };
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
-      <CardContent className="space-y-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Next Best Focus
-        </p>
+    <Card className="border-primary/30 bg-primary/5 min-h-37.5 overflow-hidden">
+      <CardContent className="flex flex-col h-full">
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Next Best Action
+          </p>
 
-        <p className="text-sm font-semibold text-foreground">{action.title}</p>
+          <div className="text-sm leading-relaxed text-muted-foreground line-clamp-3 overflow-hidden transition-all duration-500">
+            <span className="font-semibold text-primary mr-2">
+              {index + 1}.
+            </span>
+            {actions[index]}
+          </div>
+        </div>
 
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {action.description}
-        </p>
-
-        <p className="text-xs text-muted-foreground italic">
-          Suggested based on your current assessment profile.
-        </p>
+        {/* CLICKABLE DOTS */}
+        <div className="flex justify-center gap-1 mt-auto pt-3">
+          {actions.map((_, i) => (
+            <span
+              key={i}
+              onClick={() => goToIndex(i)}
+              className={`h-1.5 w-1.5 rounded-full cursor-pointer transition-all duration-300 ${
+                i === index ? "bg-primary w-4" : "bg-muted"
+              }`}
+            />
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

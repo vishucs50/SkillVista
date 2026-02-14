@@ -85,7 +85,7 @@ export default function BasicDetails({ onNext }) {
             <option>2nd Year</option>
             <option>3rd Year</option>
             <option>Final Year</option>
-            <option>Graduated</option> {/* ✅ important */}
+            <option>Graduated</option> 
           </select>
         </div>
 

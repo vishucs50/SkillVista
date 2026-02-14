@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 
 import User from "@/models/User";
+import Assessment from "@/models/Assessment";
 import { connectDB } from "@/lib/db";
 export const authOptions = {
   providers: [
@@ -28,7 +29,7 @@ export const authOptions = {
 
         const isValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password,
         );
         if (!isValid) return null;
 
@@ -80,7 +81,15 @@ export const authOptions = {
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id;
+
+        await connectDB();
+        const assessment = await Assessment.findOne({
+          userId: token.id,
+        }).lean();
+
+        session.user.hasAssessment = !!assessment;
       }
+
       return session;
     },
   },

@@ -4,7 +4,6 @@ export const syncAssessmentToBackend = async () => {
   const { basicDetails, aptitudeAnswers } =
     useAssessmentStore.getState();
 
-  // 🛑 HARD GUARD: don’t sync empty data
   if (
     !basicDetails ||
     Object.keys(basicDetails).length === 0 ||
@@ -14,12 +13,11 @@ export const syncAssessmentToBackend = async () => {
     return;
   }
 
-  // Debug: log what we're about to send
   console.debug("[syncAssessment] payload", { basicDetails, aptitudeAnswers });
 
   const res = await fetch("/api/assessment/sync", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers : { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({
       basicDetails,

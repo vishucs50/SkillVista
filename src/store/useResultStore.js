@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { persist, devtools } from "zustand/middleware";
 
 const useResultStore = create(
   devtools(
@@ -7,7 +7,17 @@ const useResultStore = create(
       (set) => ({
         employabilityIndex: null,
         aptitudeScore: null,
-        readinessBreakdown: null,
+
+        criticalSkillGaps: [],
+        nextBestActions: [],
+
+        readinessBreakdown: {
+          skills: 0,
+          aptitude: 0,
+          experience: 0,
+          consistency: 0,
+        },
+
         generatedAt: null,
 
         setResults: (results) =>
@@ -20,13 +30,18 @@ const useResultStore = create(
           set({
             employabilityIndex: null,
             aptitudeScore: null,
-            readinessBreakdown: null,
+            criticalSkillGaps: [],
+            nextBestActions: [],
+            readinessBreakdown: {
+              skills: 0,
+              aptitude: 0,
+              experience: 0,
+              consistency: 0,
+            },
             generatedAt: null,
           }),
       }),
-      {
-        name: "skillvista-result", // localStorage key
-      },
+      { name: "skillvista-result" },
     ),
   ),
 );

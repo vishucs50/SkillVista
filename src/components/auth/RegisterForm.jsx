@@ -66,9 +66,9 @@ export default function RegisterForm() {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.6 }}
     >
-      <Card className="w-full w-90 bg-zinc-900/80 border-zinc-800 backdrop-blur-xl">
+      <Card className="w-90 bg-zinc-900/80 border-zinc-800 backdrop-blur-xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold bg-linear-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">
             Create Account
           </CardTitle>
           <CardDescription className="text-zinc-400">
@@ -121,7 +121,7 @@ export default function RegisterForm() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-400 to-teal-400 text-black font-semibold"
+                className="w-full bg-linear-to-r from-cyan-400 to-teal-400 text-black font-semibold"
               >
                 {loading ? "Creating..." : "Create Account"}
               </Button>

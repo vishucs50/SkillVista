@@ -19,8 +19,27 @@ export default function ReviewConfirm({ onBack, onFinish }) {
 
     try {
       setSubmitting(true);
-      await syncAssessmentToBackend(); // ✅ ONLY save
-      onFinish(); // ✅ delegate navigation
+      
+      // Step 1: Sync assessment data to backend
+      await syncAssessmentToBackend();
+      
+      // Step 2: Generate AI results
+      const generateRes = await fetch("/api/results/generate", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      if (!generateRes.ok) {
+        const errorData = await generateRes.json().catch(() => ({}));
+        console.error("[ReviewConfirm] Generate error response:", errorData);
+        throw new Error(errorData.error || "Failed to generate results");
+      }
+      
+      // Step 3: Navigate to dashboard
+      onFinish();
+    } catch (error) {
+      console.error("[ReviewConfirm] Error:", error.message);
+      alert(`Error: ${error.message}`);
     } finally {
       setSubmitting(false);
     }

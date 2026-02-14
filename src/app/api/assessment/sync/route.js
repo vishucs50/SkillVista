@@ -32,6 +32,7 @@ export async function POST(req) {
       "timeline",
       "weeklyHours",
       "skills",
+      "profileImage",
     ];
 
     const sanitized = {};

@@ -1,0 +1,71 @@
+/* Landing Page Color Scheme */
+:root {
+  --primary: #20B2AA;
+  --primary-dark: #2E8B57;
+  --gray-bg-base: #121212;
+  --gray-bg-card: #1E1E1E;
+  --gray-bg-elevated: #2A2A2A;
+  --off-white: #F5F5F7;
+  --slate-muted: #A1A1AA;
+}
+
+.landing-page {
+  background-color: var(--gray-bg-base);
+  color: var(--off-white);
+  font-family: 'Inter', sans-serif;
+}
+
+.landing-page body {
+  background-color: var(--gray-bg-base) !important;
+  color: var(--off-white) !important;
+}
+
+/* Utility Classes */
+.glass-panel {
+  background-color: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-gray {
+  background-color: var(--gray-bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card-gray:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sea-green-gradient {
+  background: linear-gradient(135deg, #20B2AA 0%, #2E8B57 100%);
+}
+
+/* Custom Tailwind Color Classes */
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.bg-gray-bg-base {
+  background-color: var(--gray-bg-base);
+}
+
+.text-off-white {
+  color: var(--off-white);
+}
+
+.text-slate-muted {
+  color: var(--slate-muted);
+}
+
+.shadow-primary\/20 {
+  box-shadow: 0 0 0 rgba(32, 178, 170, 0.2);
+}
+
+.shadow-xl\.shadow-primary\/30 {
+  box-shadow: 0 20px 25px -5px rgba(32, 178, 170, 0.3);
+}

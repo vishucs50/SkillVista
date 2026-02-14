@@ -123,3 +123,11 @@
     @apply bg-background text-foreground;
   }
 }
+.sea-green-gradient {
+  background: linear-gradient(135deg, #20B2AA 0%, #2E8B57 100%);
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

@@ -39,14 +39,12 @@ export default function NextBestAction() {
     <Card className="border-primary/30 bg-primary/5 min-h-37.5 overflow-hidden">
       <CardContent className="flex flex-col h-full">
         <div className="space-y-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs uppercase tracking-widest text-foreground font-bold">
             Next Best Action
           </p>
 
           <div className="text-sm leading-relaxed text-muted-foreground line-clamp-3 overflow-hidden transition-all duration-500">
-            <span className="font-semibold text-primary mr-2">
-              {index + 1}.
-            </span>
+            
             {actions[index]}
           </div>
         </div>

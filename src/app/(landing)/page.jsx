@@ -12,12 +12,8 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 group cursor-pointer">
             {/* Icon Container */}
-            <div
-              className="w-9 h-9 rounded-lg  bg-[linear-gradient(135deg,#0a0a0a,#111)]  border border-white/10   flex items-center justify-center shadow-[0_0_12px_rgba(0,0,0,0.6)]    group-hover:shadow-[0_0_18px_rgba(99,102,241,0.4)]    transition-all duration-300"
-            >
-              <span
-                className="material-icons text-[22px] leading-none      bg-[linear-gradient(120deg,#ff0080,#ff8c00,#40e0d0,#7b2ff7)]      bg-clip-text text-transparent"
-              >
+            <div className="w-9 h-9 rounded-lg  bg-[linear-gradient(135deg,#0a0a0a,#111)]  border border-white/10   flex items-center justify-center shadow-[0_0_12px_rgba(0,0,0,0.6)]    group-hover:shadow-[0_0_18px_rgba(99,102,241,0.4)]    transition-all duration-300">
+              <span className="material-icons text-[22px] leading-none      bg-[linear-gradient(120deg,#ff0080,#ff8c00,#40e0d0,#7b2ff7)]      bg-clip-text text-transparent">
                 insights
               </span>
             </div>
@@ -153,10 +149,6 @@ export default function Page() {
                 <h5 className="text-lg font-bold mb-3 text-off-white">
                   Profile Sync
                 </h5>
-                <p className="text-sm text-slate-muted">
-                  Connect LinkedIn or upload your CV for instant data
-                  extraction.
-                </p>
               </div>
 
               <div className="text-center relative">
@@ -166,10 +158,6 @@ export default function Page() {
                 <h5 className="text-lg font-bold mb-3 text-off-white">
                   AI Analysis
                 </h5>
-                <p className="text-sm text-slate-muted">
-                  Our neural engine benchmarks you against real-time global
-                  demand.
-                </p>
               </div>
 
               <div className="text-center relative">
@@ -179,10 +167,6 @@ export default function Page() {
                 <h5 className="text-lg font-bold mb-3 text-off-white">
                   Optimization
                 </h5>
-                <p className="text-sm text-slate-muted">
-                  Receive custom skill roadmaps and resume upgrades to land the
-                  role.
-                </p>
               </div>
             </div>
           </section>
@@ -240,32 +224,6 @@ export default function Page() {
             </div>
           </section>
         </ScrollReveal>
-
-        {/* CTA SECTION */}
-        <ScrollReveal delay={150}>
-          <section className="max-w-7xl mx-auto px-6 py-20 pb-40">
-            <div className="bg-[#1E1E1E] rounded-3xl p-12 md:p-20 text-center relative overflow-hidden border border-white/5 shadow-2xl">
-              <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-primary/5 blur-[120px]"></div>
-              <h2 className="text-4xl md:text-6xl font-black text-off-white mb-8 relative z-10">
-                Start Your SkillVista Journey
-              </h2>
-              <p className="text-slate-muted text-lg md:text-xl max-w-2xl mx-auto mb-12 relative z-10">
-                Join 100,000+ professionals using AI to navigate their careers
-                with absolute confidence.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                <Link href="/assessment">
-                  <button className="sea-green-gradient hover:opacity-90 text-white px-10 py-5 rounded-xl text-xl font-black transition-all shadow-xl shadow-primary/30">
-                    Create Free Account
-                  </button>
-                </Link>
-                <button className="bg-white/5 text-off-white border border-white/10 backdrop-blur-md px-10 py-5 rounded-xl text-xl font-black hover:bg-white/10 transition-all">
-                  Talk to Sales
-                </button>
-              </div>
-            </div>
-          </section>
-        </ScrollReveal>
       </main>
 
       {/* FOOTER */}
@@ -274,8 +232,8 @@ export default function Page() {
           <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col items-center justify-center text-center">
             {/* BRAND */}
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 sea-green-gradient rounded flex items-center justify-center">
-                <span className="material-icons text-white text-xl">
+              <div className="w-9 h-9 rounded-lg  bg-[linear-gradient(135deg,#0a0a0a,#111)]  border border-white/10   flex items-center justify-center shadow-[0_0_12px_rgba(0,0,0,0.6)]    group-hover:shadow-[0_0_18px_rgba(99,102,241,0.4)]    transition-all duration-300">
+                <span className="material-icons text-[22px] leading-none      bg-[linear-gradient(120deg,#ff0080,#ff8c00,#40e0d0,#7b2ff7)]      bg-clip-text text-transparent">
                   insights
                 </span>
               </div>

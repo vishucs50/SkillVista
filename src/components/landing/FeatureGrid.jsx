@@ -2,7 +2,7 @@
 
 export default function FeaturesGrid() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+    <section className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
       <div className="p-6 rounded-2xl bg-[#1E1E1E] border border-white/5 hover:border-primary/30 transition-all duration-300 group">
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
           <span className="material-icons text-primary">auto_graph</span>

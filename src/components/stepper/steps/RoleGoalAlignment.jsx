@@ -42,7 +42,6 @@ export default function RoleGoalAlignment({ onNext, onBack }) {
             <option>Backend Developer</option>
             <option>Data Analyst</option>
             <option>ML Engineer</option>
-            <option>Core CS / GATE</option>
           </select>
         </div>
 
@@ -78,7 +77,7 @@ export default function RoleGoalAlignment({ onNext, onBack }) {
           </select>
         </div>
 
-        {/* Soft confirmation (important for reliability) */}
+
         {isValid && (
           <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
             You’ll be assessed for{" "}

@@ -21,7 +21,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
   return (
     <>
       <ProfileEditForm isOpen={showEditForm} onClose={() => setShowEditForm(false)} />
-
+    
       {/* Mobile Overlay */}
       {isOpen && (
         <div

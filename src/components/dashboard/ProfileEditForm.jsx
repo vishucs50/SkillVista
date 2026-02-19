@@ -7,12 +7,14 @@ import { useAssessmentStore } from "@/store/useAssessmentStore";
 import { X, Upload } from "lucide-react";
 import { syncAssessmentToBackend } from "@/lib/syncAssessment";
 import Image from "next/image";
+import { useEffect } from "react";
 import useResultStore from "@/store/useResultStore";
 export default function ProfileEditForm({ isOpen, onClose }) {
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
   const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
   const setResults = useResultStore((s) => s.setResults);
   const [formData, setFormData] = useState(basicDetails);
+
   const [profileImage, setProfileImage] = useState(
     basicDetails.profileImage || null,
   );
@@ -21,6 +23,11 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  useEffect(() => {
+    setFormData(basicDetails);
+    setProfileImage(basicDetails.profileImage || null);
+    setImagePreview(basicDetails.profileImage || "/download.jpeg");
+  }, [basicDetails]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -45,10 +45,22 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      let uploadedImageUrl = profileImage;
+
+      if (profileImage?.startsWith("data:image")) {
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: profileImage }),
+        });
+
+        const uploadData = await uploadRes.json();
+        uploadedImageUrl = uploadData.url;
+      }
 
       const updatedData = {
         ...formData,
-        profileImage: profileImage,
+        profileImage: uploadedImageUrl,
       };
 
       setBasicDetails(updatedData);
@@ -63,17 +75,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
         setResults(resultsData);
       }
 
-      // Refetch assessment data
-      const res = await fetch("/api/assessment/me", {
-        method:"POST",
-        credentials: "include",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.assessment?.basicDetails) {
-          setBasicDetails(data.assessment.basicDetails);
-        }
-      }
+      
 
       setSaveSuccess(true);
       setTimeout(() => {
@@ -93,7 +95,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-101 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <CardHeader className="flex flex-row items-center justify-between  bg-card border-b ">
             <CardTitle >Edit Your Profile</CardTitle>
@@ -125,6 +127,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                       src={imagePreview}
                       alt="Profile preview"
                       fill
+                      sizes="70px"
                       className="object-cover"
                     />
                   ) : (

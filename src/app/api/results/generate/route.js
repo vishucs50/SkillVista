@@ -15,22 +15,15 @@ export async function POST(req) {
     }
 
     const userId = token.id;
-    console.log("[api/results/generate] userId:", userId);
 
     const assessment = await Assessment.findOne({ userId }).lean();
     if (!assessment) {
-      console.error("[api/results/generate] Assessment not found for userId:", userId);
       return new Response("Assessment not found", { status: 404 });
     }
 
-    console.log("[api/results/generate] Assessment found, calling analyzeAssessment...");
 
-    // 🔥 Gemini analysis
     const result = await analyzeAssessment(assessment);
-    
-    console.log("[api/results/generate] Analysis result:", result);
 
-    // 🔐 Save result (UPSERT)
     await AssessmentResult.findOneAndUpdate(
       { userId },
       {

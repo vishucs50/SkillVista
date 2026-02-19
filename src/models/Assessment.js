@@ -14,6 +14,10 @@ const BasicDetailsSchema = new mongoose.Schema(
     timeline: String,
     weeklyHours: String,
     skills: [String],
+    profileImage: {
+      type: String,
+      default: "/download.jpeg",
+    },
   },
   { _id: false },
 );
@@ -32,6 +36,7 @@ const AssessmentSchema = new mongoose.Schema(
       type: Object,
       default: {},
     },
+    
   },
   { timestamps: true },
 );

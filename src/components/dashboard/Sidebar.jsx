@@ -18,11 +18,10 @@ const navItems = [
 export default function Sidebar({ isOpen = true, onClose = () => {} }) {
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
   const [showEditForm, setShowEditForm] = useState(false);
-
   return (
     <>
       <ProfileEditForm isOpen={showEditForm} onClose={() => setShowEditForm(false)} />
-
+    
       {/* Mobile Overlay */}
       {isOpen && (
         <div
@@ -44,10 +43,10 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
             <div className="relative size-10 rounded-md overflow-hidden border border-border bg-background shrink-0">
 
               <Image
-                key={basicDetails.profileImage}
                 src={basicDetails.profileImage || "/download.jpeg"}
                 alt="Candidate profile"
                 fill
+                sizes="40px"
                 className="object-cover"
               />
             </div>

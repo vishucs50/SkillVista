@@ -7,12 +7,14 @@ import { useAssessmentStore } from "@/store/useAssessmentStore";
 import { X, Upload } from "lucide-react";
 import { syncAssessmentToBackend } from "@/lib/syncAssessment";
 import Image from "next/image";
+import { useEffect } from "react";
 import useResultStore from "@/store/useResultStore";
 export default function ProfileEditForm({ isOpen, onClose }) {
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
   const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
   const setResults = useResultStore((s) => s.setResults);
   const [formData, setFormData] = useState(basicDetails);
+
   const [profileImage, setProfileImage] = useState(
     basicDetails.profileImage || null,
   );
@@ -21,6 +23,11 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  useEffect(() => {
+    setFormData(basicDetails);
+    setProfileImage(basicDetails.profileImage || null);
+    setImagePreview(basicDetails.profileImage || "/download.jpeg");
+  }, [basicDetails]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,10 +52,22 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      let uploadedImageUrl = profileImage;
+
+      if (profileImage?.startsWith("data:image")) {
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: profileImage }),
+        });
+
+        const uploadData = await uploadRes.json();
+        uploadedImageUrl = uploadData.url;
+      }
 
       const updatedData = {
         ...formData,
-        profileImage: profileImage,
+        profileImage: uploadedImageUrl,
       };
 
       setBasicDetails(updatedData);
@@ -63,17 +82,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
         setResults(resultsData);
       }
 
-      // Refetch assessment data
-      const res = await fetch("/api/assessment/me", {
-        method:"POST",
-        credentials: "include",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.assessment?.basicDetails) {
-          setBasicDetails(data.assessment.basicDetails);
-        }
-      }
+      
 
       setSaveSuccess(true);
       setTimeout(() => {
@@ -93,7 +102,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-101 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <CardHeader className="flex flex-row items-center justify-between  bg-card border-b ">
             <CardTitle >Edit Your Profile</CardTitle>
@@ -125,6 +134,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                       src={imagePreview}
                       alt="Profile preview"
                       fill
+                      sizes="70px"
                       className="object-cover"
                     />
                   ) : (

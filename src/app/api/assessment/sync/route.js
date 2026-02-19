@@ -12,12 +12,10 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    console.log("[api/assessment/sync] received body:", body);
+
     const userId = token.id;
 
     const incoming = body.basicDetails || {};
-    console.log("[api/assessment/sync] incoming basicDetails keys:", Object.keys(incoming));
-    console.log("[api/assessment/sync] incoming basicDetails values:", JSON.stringify(incoming, null, 2));
 
     const allowed = [
       "name",
@@ -41,7 +39,7 @@ export async function POST(req) {
         sanitized[key] = incoming[key];
       }
     }
-    console.log("[api/assessment/sync] sanitized keys:", Object.keys(sanitized));
+
 
     const existing = await Assessment.findOne({ userId }).lean();
     const mergedBasic = {
@@ -49,7 +47,6 @@ export async function POST(req) {
       ...sanitized,
     };
 
-    console.log("[api/assessment/sync] merged basicDetails to save:", mergedBasic);
 
     await Assessment.findOneAndUpdate(
       { userId },
@@ -61,7 +58,7 @@ export async function POST(req) {
       {
         upsert: true,
         new: true,
-        runValidators: false,
+        runValidators: true,
       }
     );
 

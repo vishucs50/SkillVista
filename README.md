@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# SkillVista
 
-## Getting Started
+SkillVista is a modern Next.js application that helps assess and surface employability skills, career readiness, and personalized learning actions for students and job seekers. It provides assessment workflows, results generation, user authentication, and an analytics/dashboard UI.
 
-First, run the development server:
+## Tech stack
+
+- Next.js (App Router)
+- React 19
+- Tailwind CSS
+- MongoDB (Mongoose)
+- NextAuth for authentication
+- Cloudinary for media uploads
+- Zustand for state Management
+- Google Generative AI client (Gemini integration)
+
+## Key features
+
+- Multi-step assessment flow with stepper UI
+- User registration & login (NextAuth)
+- Upload and manage profile Images via Cloudinary
+- Generate assessment results and dashboards
+- API routes for syncing assessments and results
+
+## Quick start
+
+Prerequisites: Node.js 18+, npm (or pnpm/yarn), and access to a MongoDB instance.
+
+1. Clone the repo
+
+```bash
+git clone https://github.com/vishucs50/SkillVista.git
+cd SkillVista
+```
+
+2. Install dependencies
+
+```bash
+npm install
+```
+
+3. Create environment variables
+
+Create a `.env.local` at the project root with required variables. Inspect `src/lib` and `src/app/api` for the exact variables your setup needs (examples below).
+
+Common variables to provide:
+
+- `MONGODB_URI` — MongoDB connection string
+- `NEXTAUTH_SECRET` — NextAuth secret key
+- `NEXTAUTH_URL` — base URL (e.g. `http://localhost:3000`)
+- `GOOGLE_CLIENT_ID`=from google cloud console
+- `GOOGLE_CLIENT_SECRET`=from google cloud console
+- Cloudinary credentials 
+- Any provider/API keys (e.g. generative AI)
+
+4. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Build and start for production
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+6. Lint
 
-## Learn More
+```bash
+npm run lint
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/app` — Next.js App Router pages & API routes
+- `src/components` — UI components and stepper steps
+- `src/lib` — helpers: `db.js`, `cloudinary.js`, `utils.js`, gemini helpers
+- `src/models` — Mongoose models
+- `src/store` — Zustand stores for assessment/result state
+## API routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Server routes live under `src/app/api`. Important endpoints include authentication, registration, upload, assessment sync, and result generation.
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This app is ready for Vercel or any Node.js/Next.js hosting. Ensure environment variables are configured in the target environment.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+

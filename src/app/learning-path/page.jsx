@@ -125,7 +125,7 @@ export default function LearningPathPage() {
             {/* Error State */}
             {error && (
               <div className="mb-8 rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
-                <AlertCircle size={18} className="text-destructive mt-0.5 flex-shrink-0" />
+                <AlertCircle size={18} className="text-destructive mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-destructive">Error</p>
                   <p className="text-sm text-destructive mt-1">{error}</p>

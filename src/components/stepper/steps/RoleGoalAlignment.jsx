@@ -42,6 +42,7 @@ export default function RoleGoalAlignment({ onNext, onBack }) {
             <option>Backend Developer</option>
             <option>Data Analyst</option>
             <option>ML Engineer</option>
+            <option>UI/UX Designer</option>
           </select>
         </div>
 

@@ -1,27 +1,36 @@
 // components/dashboard/Sidebar.tsx
+"use client";
+
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Edit2 } from "lucide-react";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
 import ProfileEditForm from "./ProfileEditForm";
 
 const navItems = [
-  { label: "Overview", active: true },
-  { label: "Assessments", active: false },
-  { label: "Skill Gaps", active: false },
-  { label: "Career Fit", active: false },
-  { label: "Learning Path", active: false },
+  { label: "Overview", href: "/dashboard" },
+  { label: "Assessments", href: "/assessments" },
+  { label: "Skill Gaps", href: "/skill-gap" },
+  { label: "Career Fit", href: "/career-fit" },
+  { label: "Learning Path", href: "/learning-path" },
 ];
 
 export default function Sidebar({ isOpen = true, onClose = () => {} }) {
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
   const [showEditForm, setShowEditForm] = useState(false);
+
+  const pathname = usePathname();
+
   return (
     <>
-      <ProfileEditForm isOpen={showEditForm} onClose={() => setShowEditForm(false)} />
-    
+      <ProfileEditForm
+        isOpen={showEditForm}
+        onClose={() => setShowEditForm(false)}
+      />
+
       {/* Mobile Overlay */}
       {isOpen && (
         <div
@@ -41,18 +50,20 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
           <div className="rounded-xl border border-border bg-muted p-4 flex items-center gap-3 group cursor-pointer hover:bg-muted/80 transition-colors relative">
             {/* Profile Image */}
             <div className="relative size-10 rounded-md overflow-hidden border border-border bg-background shrink-0">
-
               <Image
-                src={basicDetails.profileImage || "/download.jpeg"}
+                src={basicDetails?.profileImage || "/download.jpeg"}
                 alt="Candidate profile"
                 fill
                 sizes="40px"
                 className="object-cover"
               />
             </div>
+
             {/* Text */}
             <div className="flex-1">
-              <p className="text-xs font-semibold">{basicDetails.name || "User Profile"}</p>
+              <p className="text-xs font-semibold">
+                {basicDetails?.name || "User Profile"}
+              </p>
             </div>
 
             {/* Edit Button */}
@@ -72,16 +83,20 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
         </p>
 
         <nav className="space-y-3">
-          {navItems.map((item) => (
-            <Button
-              key={item.label}
-              variant={item.active ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={onClose}
-            >
-              {item.label}
-            </Button>
-          ))}
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+
+            return (
+              <Link key={item.label} href={item.href} onClick={onClose}>
+                <Button
+                  variant={isActive ? "default" : "ghost"}
+                  className="w-full justify-start"
+                >
+                  {item.label}
+                </Button>
+              </Link>
+            );
+          })}
         </nav>
       </aside>
     </>

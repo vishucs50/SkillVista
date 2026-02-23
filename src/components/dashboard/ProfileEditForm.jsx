@@ -9,10 +9,13 @@ import { syncAssessmentToBackend } from "@/lib/syncAssessment";
 import Image from "next/image";
 import { useEffect } from "react";
 import useResultStore from "@/store/useResultStore";
+import { useSkillGapStore } from "@/store/useSkillGapStore";
 export default function ProfileEditForm({ isOpen, onClose }) {
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
   const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
   const setResults = useResultStore((s) => s.setResults);
+  const resetResults = useResultStore((s) => s.resetResults);
+  const clearSkillGap = useSkillGapStore((s) => s.clearAnalysis);
   const [formData, setFormData] = useState(basicDetails);
 
   const [profileImage, setProfileImage] = useState(
@@ -70,8 +73,28 @@ export default function ProfileEditForm({ isOpen, onClose }) {
         profileImage: uploadedImageUrl,
       };
 
+      const roleChanged = basicDetails?.targetRole !== updatedData?.targetRole;
+
       setBasicDetails(updatedData);
+
+      if (roleChanged) {
+        try {
+          // Clear backend derived data
+          await fetch("/api/user/clear-derived-data", {
+            method: "POST",
+            credentials: "include",
+          });
+
+          // Clear client-side caches/stores
+          clearSkillGap();
+          resetResults();
+        } catch (err) {
+          console.error("Failed to clear derived data:", err);
+        }
+      }
+
       await syncAssessmentToBackend();
+
       const resultsRes = await fetch("/api/results/generate", {
         method: "POST",
         credentials: "include",

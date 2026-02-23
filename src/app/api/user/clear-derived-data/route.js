@@ -16,7 +16,6 @@ export async function POST(req) {
 
     // Delete any cached skill-gap analyses and previous assessment results
     await SkillGapAnalysis.deleteMany({ userId });
-    await AssessmentResult.findOneAndDelete({ userId });
 
     return Response.json({ ok: true });
   } catch (error) {

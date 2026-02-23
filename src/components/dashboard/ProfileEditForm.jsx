@@ -105,7 +105,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
       <div className="fixed inset-0 z-101 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <CardHeader className="flex flex-row items-center justify-between  bg-card border-b ">
-            <CardTitle >Edit Your Profile</CardTitle>
+            <CardTitle>Edit Your Profile</CardTitle>
             <Button
               variant="ghost"
               size="icon"
@@ -235,20 +235,27 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                 <option>Graduated</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-semibold mb-2">
                 Target Role
               </label>
-              <input
-                type="text"
-                name="targetRole"
+              <select
+                name="year"
                 value={formData.targetRole || ""}
                 onChange={handleChange}
-                placeholder="e.g., Software Engineer, Product Manager"
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+              >
+                <option value="">Select</option>
+                <option>Software Developer</option>
+                <option>Frontend Developer</option>
+                <option>Backend Developer</option>
+                <option>Data Analyst</option>
+                <option>ML Engineer</option>
+                <option>UI/UX Designer</option>
+              </select>
             </div>
+            
+           
 
             <div>
               <label className="block text-sm font-semibold mb-2">
@@ -318,7 +325,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                 <option>No projects</option>
                 <option>1–2 small projects</option>
                 <option>3–5 medium projects</option>
-                <option>End-to-end projects</option>  
+                <option>End-to-end projects</option>
               </select>
             </div>
 

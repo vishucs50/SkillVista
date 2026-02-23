@@ -117,7 +117,7 @@ export default function LearningPathPage() {
                   Your Learning Path
                 </h1>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground ">
                 A personalized roadmap to master the skills for your target role
               </p>
             </div>
@@ -153,7 +153,7 @@ export default function LearningPathPage() {
                   <h3 className="mb-2 text-base font-semibold text-foreground">
                     No Learning Path Yet
                   </h3>
-                  <p className="mb-6 max-w-sm text-sm text-muted-foreground">
+                  <p className="mb-6 max-w-sm mx-auto text-sm text-muted-foreground ">
                     Complete the skill gap analysis to get your personalized learning path
                   </p>
                   <Button onClick={triggerAnalysis} disabled={isLoading}>

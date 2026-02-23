@@ -67,19 +67,11 @@ export const authOptions = {
         return token;
       }
 
-      if (token.email && !token.id) {
-        try {
-          await connectDB();
-          const dbUser = await User.findOne({ email: token.email });
-          if (dbUser?._id) {
-            token.id = dbUser._id.toString();
-          } else {
-            console.warn(
-              `[NextAuth] User lookup failed for email: ${token.email}`,
-            );
-          }
-        } catch (error) {
-          console.error("[NextAuth JWT] Database error:", error.message);
+      if (token.email) {
+        await connectDB();
+        const dbUser = await User.findOne({ email: token.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
         }
       }
 

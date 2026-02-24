@@ -26,6 +26,7 @@ export default function SkillGapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const analysis = useSkillGapStore((s) => s.analysis);
   const setAnalysis = useSkillGapStore((s) => s.setAnalysis);
+  const clearAnalysis = useSkillGapStore((s) => s.clearAnalysis);
   const [error, setError] = useState(null);
 
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
@@ -36,13 +37,41 @@ export default function SkillGapPage() {
     }
   }, [status, router]);
 
-const handleAnalyze = async (targetRole, experienceLevel) => {
-  if (analysis) return; // 🔥 avoid re-fetch if already exists
+  // Clear analysis if user session changes (new user logged in)
+  useEffect(() => {
+    if (session?.user?.id && analysis) {
+      // If we have a cached analysis, verify it's for current user
+      // If not, clear it to prevent showing old user's data to new user
+      clearAnalysis();
+    }
+  }, [session?.user?.id, clearAnalysis]);
 
+const handleAnalyze = async (targetRole, experienceLevel) => {
   setIsLoading(true);
   setError(null);
 
   try {
+    // Fetch GitHub data if available
+    let githubData = null;
+    try {
+      const githubRes = await fetch("/api/github/analyze");
+      if (githubRes.ok) {
+        const githubInfo = await githubRes.json();
+        if (githubInfo.githubConnected && githubInfo.githubData) {
+          githubData = {
+            topLanguages: githubInfo.githubData.topLanguages || [],
+            detectedFrameworks: githubInfo.githubData.detectedFrameworks || [],
+            repositories: githubInfo.githubData.repositories || 0,
+            followers: githubInfo.githubData.followers || 0,
+            strengthAreas: githubInfo.githubData.strengthAreas || [],
+            contributionLevel: githubInfo.githubData.contributionLevel || "low",
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch GitHub data:", err);
+    }
+
     const res = await fetch("/api/skill-gap/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -50,7 +79,7 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
         targetRole,
         experienceLevel,
         userSkills: basicDetails?.skills || [],
-        githubData: {
+        githubData: githubData || {
           skills: basicDetails?.skills || [],
           targetRole: basicDetails?.targetRole || "",
         },
@@ -166,10 +195,6 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
                   <RequiredSkills data={analysis.requiredSkills} />
                 </RevealOnScroll>
 
-                {/* Section 3: GitHub Analysis */}
-                <RevealOnScroll delay={0.05}>
-                  <GitHubAnalysis data={analysis.githubInsights} />
-                </RevealOnScroll>
 
                 {/* Section 4: Skill Gap Comparison */}
                 <RevealOnScroll delay={0.1}>

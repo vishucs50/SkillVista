@@ -39,7 +39,8 @@ export async function POST(req) {
       );
     }
 
-    // ✅ CREATE HASH (no prompt changes)
+    // ✅ CREATE HASH - per-user caching with skills included
+    // Each user gets their own cached analysis based on their skills
     const inputHash = crypto
       .createHash("sha256")
       .update(
@@ -52,19 +53,29 @@ export async function POST(req) {
       )
       .digest("hex");
 
-    // ✅ CHECK CACHE FIRST
+    console.log(
+      `[skill-gap/analyze] Looking for cached analysis for user ${token.id}`
+    );
+
+    // ✅ CHECK CACHE FIRST - per-user cache lookup
     const existing = await SkillGapAnalysis.findOne({
       userId: token.id,
       inputHash,
-    });
+    }).lean();
 
     if (existing) {
-      console.log("✅ Returning cached analysis");
-      return Response.json(existing.analysisJSON);
+      console.log("✅ Returning cached analysis (backend cache hit)");
+      return Response.json({
+        success: true,
+        fromCache: true,
+        cached: true,
+        ...existing.analysisJSON,
+      });
     }
 
-    // ================= GEMINI CALL (PROMPT UNCHANGED) =================
+    console.log("⏳ Cache miss - calling Gemini API...");
 
+    // ================= GEMINI CALL =================
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       generationConfig: {
@@ -154,7 +165,7 @@ Rules:
 
     const analysis = JSON.parse(text);
 
-    // ✅ SAVE TO MONGODB
+    // ✅ SAVE TO MONGODB - per-user caching
     await SkillGapAnalysis.create({
       userId: token.id,
       targetRole,
@@ -163,9 +174,13 @@ Rules:
       analysisJSON: analysis,
     });
 
-    console.log("💾 Saved new analysis");
+    console.log("💾 Saved new analysis for user");
 
-    return Response.json(analysis);
+    return Response.json({
+      success: true,
+      fromCache: false,
+      ...analysis,
+    });
   } catch (error) {
     console.error("[skill-gap/analyze] Error:", error.message);
     return Response.json(

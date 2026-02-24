@@ -28,5 +28,8 @@ const SkillGapAnalysisSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+// Compound index for efficient lookups (per-user + role + level)
+SkillGapAnalysisSchema.index({ userId: 1, targetRole: 1, experienceLevel: 1 });
+
 export default mongoose.models.SkillGapAnalysis ||
   mongoose.model("SkillGapAnalysis", SkillGapAnalysisSchema);

@@ -14,7 +14,7 @@ export async function POST(req) {
 
     const userId = token.id;
 
-    // Delete any cached skill-gap analyses and previous assessment results
+    // ✅ Delete user-specific cached analyses
     await SkillGapAnalysis.deleteMany({ userId });
 
     return Response.json({ ok: true });

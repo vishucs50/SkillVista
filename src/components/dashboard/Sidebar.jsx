@@ -12,6 +12,7 @@ import ProfileEditForm from "./ProfileEditForm";
 
 const navItems = [
   { label: "Overview", href: "/dashboard" },
+  { label: "Skill Progress", href: "/skill-progress" },
   { label: "Assessments", href: "/assessments" },
   { label: "Skill Gaps", href: "/skill-gap" },
   { label: "Career Fit", href: "/career-fit" },

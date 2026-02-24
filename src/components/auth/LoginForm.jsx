@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,22 @@ const LoginForm = () => {
             >
               <FcGoogle className="h-5 w-5" />
               <span>Continue with Google</span>
+            </Button>
+          </motion.div>
+
+          {/* ---------- GITHUB LOGIN ---------- */}
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              variant="outline"
+              className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 flex items-center justify-center gap-3"
+              onClick={() =>
+                signIn("github", {
+                  callbackUrl: "/auth/redirect",
+                })
+              }
+            >
+              <FaGithub className="h-5 w-5" />
+              <span>Continue with GitHub</span>
             </Button>
           </motion.div>
 

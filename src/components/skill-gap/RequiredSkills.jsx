@@ -53,7 +53,7 @@ export default function RequiredSkills({ data }) {
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
             const skills = data[key];
             if (!skills || skills.length === 0) return null;

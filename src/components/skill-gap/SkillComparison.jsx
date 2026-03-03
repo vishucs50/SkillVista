@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Check, X, AlertTriangle, Minus, GitCompare } from "lucide-react";
@@ -18,11 +19,11 @@ function MatchScoreRing({ score }) {
   const color = getColor(score);
 
   return (
-    <div className="relative flex size-36 items-center justify-center">
+    <div className="relative flex size-32 items-center justify-center">
       <svg
         className="-rotate-90"
-        width="144"
-        height="144"
+        width="120"
+        height="120"
         viewBox="0 0 100 100"
       >
         <circle
@@ -45,23 +46,11 @@ function MatchScoreRing({ score }) {
           initial={{ strokeDashoffset: CIRCUMFERENCE }}
           animate={{ strokeDashoffset: dashOffset }}
           transition={{ duration: 1.2, ease: "easeOut" }}
-          style={{
-            filter: `drop-shadow(0 0 8px ${color}40)`,
-          }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.span
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          className="text-3xl font-bold text-foreground"
-        >
-          {score}%
-        </motion.span>
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">
-          Match
-        </span>
+      <div className="absolute text-center">
+        <div className="text-2xl font-bold">{score}%</div>
+        <div className="text-xs text-muted-foreground">Match</div>
       </div>
     </div>
   );
@@ -69,30 +58,16 @@ function MatchScoreRing({ score }) {
 
 function GapStatusBadge({ status }) {
   const config = {
-    "No Gap": {
-      icon: Check,
-      className: "text-green-400",
-    },
-    "Critical Gap": {
-      icon: X,
-      className: "text-red-400",
-    },
-    "Moderate Gap": {
-      icon: AlertTriangle,
-      className: "text-yellow-400",
-    },
-    "Optional Enhancement": {
-      icon: Minus,
-      className: "text-muted-foreground",
-    },
+    "No Gap": { icon: Check, color: "text-green-400" },
+    "Critical Gap": { icon: X, color: "text-red-400" },
+    "Moderate Gap": { icon: AlertTriangle, color: "text-yellow-400" },
+    "Optional Enhancement": { icon: Minus, color: "text-muted-foreground" },
   };
 
-  const { icon: Icon, className } = config[status] || config["No Gap"];
+  const { icon: Icon, color } = config[status] || config["No Gap"];
 
   return (
-    <span
-      className={`flex items-center gap-1.5 text-xs font-medium ${className}`}
-    >
+    <span className={`flex items-center gap-1 text-xs font-medium ${color}`}>
       <Icon size={14} />
       {status}
     </span>
@@ -100,77 +75,116 @@ function GapStatusBadge({ status }) {
 }
 
 export default function SkillComparison({ matchPercentage, comparison }) {
+  const [filter, setFilter] = useState("Critical Gap");
+
+  const filteredData = useMemo(() => {
+    if (filter === "All") return comparison;
+    return comparison.filter((item) => item.gapStatus === filter);
+  }, [comparison, filter]);
   if (!comparison || comparison.length === 0) return null;
+
+
+  const filters = ["Critical Gap", "Moderate Gap", "No Gap", "All"];
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <GitCompare size={24} className="text-primary" />
+          <GitCompare size={22} className="text-primary" />
           Skill Gap Comparison
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          How your current skills stack up against the role requirements
-        </p>
       </CardHeader>
 
       <CardContent>
-        <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-6 lg:flex-row">
           {/* Match Score */}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center">
             <MatchScoreRing score={matchPercentage || 0} />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground mt-2">
               Overall Match Score
             </span>
           </div>
 
-          {/* Comparison Table */}
-          <div className="flex-1 w-full overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="pb-3 text-left font-semibold">Skill</th>
-                  <th className="pb-3 text-center font-semibold">Required</th>
-                  <th className="pb-3 text-center font-semibold">You Have</th>
-                  <th className="pb-3 text-right font-semibold">Gap Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparison.map((item, idx) => (
-                  <motion.tr
-                    key={item.skill}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="border-b border-border/50 last:border-0"
-                  >
-                    <td className="py-3 text-foreground font-medium">
-                      {item.skill}
-                    </td>
-                    <td className="py-3 text-center">
-                      {item.required ? (
-                        <Check size={16} className="mx-auto text-foreground" />
-                      ) : (
-                        <Minus
-                          size={16}
-                          className="mx-auto text-muted-foreground"
-                        />
-                      )}
-                    </td>
-                    <td className="py-3 text-center">
-                      {item.userHas ? (
-                        <Check size={16} className="mx-auto text-green-400" />
-                      ) : (
-                        <X size={16} className="mx-auto text-red-400" />
-                      )}
-                    </td>
-                    <td className="py-3 text-right">
-                      <GapStatusBadge status={item.gapStatus} />
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Skills Section */}
+          <div className="flex-1 w-full">
+            {/* Filters */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {filters.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 text-xs rounded-md border transition ${
+                    filter === f
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/70"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            {/* Scrollable Table */}
+            <div className="max-h-64 overflow-y-auto border rounded-md custom-scroll">  
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background border-b">
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="p-3 text-left">Skill</th>
+                    <th className="p-3 text-center">Required</th>
+                    <th className="p-3 text-center">You</th>
+                    <th className="p-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((item, idx) => (
+                    <motion.tr
+                      key={item.skill}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className="border-b last:border-0 align-middle"
+                    >
+                      {/* Skill */}
+                      <td className="px-4 py-3 font-medium whitespace-nowrap">
+                        {item.skill}
+                      </td>
+
+                      {/* Required */}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center items-center">
+                          {item.required ? (
+                            <Check size={16} />
+                          ) : (
+                            <Minus
+                              size={16}
+                              className="text-muted-foreground"
+                            />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* You */}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center items-center">
+                          {item.userHas ? (
+                            <Check size={16} className="text-green-400" />
+                          ) : (
+                            <X size={16} className="text-red-400" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center items-center">
+                          <GapStatusBadge status={item.gapStatus} />
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </CardContent>

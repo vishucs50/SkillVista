@@ -99,6 +99,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
             );
           })}
         </nav>
+        
       </aside>
     </>
   );

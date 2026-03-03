@@ -20,7 +20,7 @@ const prompt = `Analyze this candidate's assessment and return STRICT JSON:
 {
   "employabilityIndex": number,
   "aptitudeScore": number,
-  "criticalSkillGaps": ["gap1","gap2","gap3"],
+  "criticalSkillGaps": ["gap1","gap2","gap3","gap4","gap5"],
   "nextBestActions": ["action1","action2","action3","action4","action5"],
   "readinessBreakdown": {
     "skills": number,

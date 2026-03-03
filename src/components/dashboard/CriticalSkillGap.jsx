@@ -13,7 +13,7 @@ export default function CriticalSkillGaps() {
         <CardTitle>Critical Gaps</CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {gaps && gaps.length > 0 ? (
           gaps.map((gap, index) => <Gap key={index} title={gap} />)
         ) : (

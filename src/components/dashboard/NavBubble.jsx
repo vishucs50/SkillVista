@@ -18,7 +18,6 @@ const navItems = [
   { label: "Skill Progress", href: "/skill-progress", icon: TrendingUp },
   { label: "Assessments", href: "/assessments", icon: ClipboardList },
   { label: "Skill Gaps", href: "/skill-gap", icon: Target },
-  { label: "Career Fit", href: "/career-fit", icon: BarChart3 },
   { label: "Learning Path", href: "/learning-path", icon: BookOpen },
   { label: "Req Skills", href: "/required-skill", icon: ClipboardList },
 ];

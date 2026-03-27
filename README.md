@@ -176,5 +176,5 @@ Server routes live under `src/app/api`:
 
 This app is ready for Vercel or any Node.js/Next.js hosting. Ensure environment variables are configured in the target environment.
 
-
+hello world
 

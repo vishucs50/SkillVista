@@ -16,7 +16,6 @@ const navItems = [
   { label: "Assessments", href: "/assessments" },
   { label: "Mental Ability", href: "/assessment/hub" },
   { label: "Skill Gaps", href: "/skill-gap" },
-  { label: "Career Fit", href: "/career-fit" },
   { label: "Learning Path", href: "/learning-path" },
 ];
 

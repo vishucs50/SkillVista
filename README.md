@@ -12,7 +12,6 @@ SkillVista is a modern Next.js application that helps assess and surface employa
 - **State Management**: Zustand
 - **AI**: Google Generative AI (Gemini integration)
 
-**Languages**: JavaScript (97.6%), CSS (2.4%)
 
 ## Key Features
 
@@ -165,14 +164,3 @@ All API routes are located under `/src/app/api`:
 
 SkillVista is ready for deployment on Vercel or any Node.js/Next.js hosting platform. Ensure all environment variables are properly configured in your deployment environment.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For support or questions, please open an issue on the [GitHub repository](https://github.com/vishucs50/SkillVista).

@@ -39,8 +39,8 @@ export default function AssessmentHub() {
   const fetchData = async () => {
     try {
       const [attemptsRes, analyticsRes] = await Promise.all([
-        fetch(`/api/attempts?userId=${session.user.id}`),
-        fetch(`/api/attempts/analytics?userId=${session.user.id}`),
+        fetch("/api/attempts"),
+        fetch("/api/attempts/analytics"),
       ]);
 
       const attemptsData = await attemptsRes.json();

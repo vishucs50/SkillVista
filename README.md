@@ -29,6 +29,11 @@ SkillVista is a modern Next.js application that helps assess and surface employa
 - **Learning Path Generation** - Personalized learning recommendations and action plans
 - **Assessment Results** - Detailed performance analytics and insights
 - **Real-time Synchronization** - Instant syncing of assessment and results data
+- **Resume and job matching** with AI-generated strengths, missing skills, and keyword recommendations
+- **Interview preparation** with role-specific technical, behavioral, and scenario questions
+- **Learning progress tracking** with persistent action completion
+- **Skill-gap analysis history** for comparing progress across roles and time
+- **Account data controls** for exporting or deleting personal data
 
 ## Quick Start
 
@@ -153,14 +158,26 @@ All API routes are located under `/src/app/api`:
 
 ## Main Pages
 
-- **Landing Page** — Feature overview and call-to-action
-- **Assessment** — Multi-step skill questionnaire
-- **Dashboard** — Comprehensive analytics and insights
-- **Skill Gap Analysis** — Identify and compare skill gaps for target roles
-- **Learning Path** — Personalized recommendations based on gaps
-- **Skill Progress** — GitHub-based progress tracking
+- **Landing Page** — Public homepage with feature overview
+- **Assessment** — Multi-step skill assessment questionnaire
+- **Dashboard** — Comprehensive analytics and insights:
+  - Employability score
+  - Skill strengths and weaknesses
+  - Hiring readiness assessment
+  - Recommended next actions
+- **Skill Gap Analysis** — Identify gaps for target roles:
+  - Select target job roles
+  - Compare current skills vs required
+  - AI-powered gap analysis
+  - View actionable recommendations
+- **Learning Path** — Personalized learning recommendations based on skill gaps
+- **Skill Progress** — Track progress via GitHub integration:
+  - Connect GitHub account
+  - Analyze repositories
+  - Monitor skill development
+- **Career Match** — Paste a resume and job description to identify alignment and missing keywords
+- **Interview Prep** — Generate an interview practice set for a target role
 
 ## Deployment
 
-SkillVista is ready for deployment on Vercel or any Node.js/Next.js hosting platform. Ensure all environment variables are properly configured in your deployment environment.
-
+This app is ready for Vercel or any Node.js/Next.js hosting. Ensure environment variables are configured in the target environment.

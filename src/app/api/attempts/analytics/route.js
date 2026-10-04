@@ -14,15 +14,7 @@ export async function GET(request) {
 
     await connectDB();
 
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId parameter is required" },
-        { status: 400 }
-      );
-    }
+    const userId = session.user.id;
 
     const attempts = await MentalAbilityAttempt.find({ userId })
       .sort({ createdAt: 1 })

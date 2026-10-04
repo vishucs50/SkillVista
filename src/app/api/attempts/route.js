@@ -15,15 +15,7 @@ export async function GET(request) {
 
     await connectDB();
 
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId parameter is required" },
-        { status: 400 }
-      );
-    }
+    const userId = session.user.id;
 
     const attempts = await MentalAbilityAttempt.find({ userId })
       .sort({ createdAt: -1 })
@@ -51,9 +43,9 @@ export async function POST(request) {
     await connectDB();
 
     const body = await request.json();
-    const { userId, answers, timeTaken } = body;
+    const { answers, timeTaken } = body;
 
-    if (!userId || !answers || !Array.isArray(answers)) {
+    if (!answers || !Array.isArray(answers) || answers.length === 0) {
       return NextResponse.json(
         { error: "Invalid request data" },
         { status: 400 }
@@ -83,7 +75,7 @@ export async function POST(request) {
     });
 
     const score = evaluatedAnswers.filter((a) => a.isCorrect).length;
-    const totalQuestions = answers.length;
+    const totalQuestions = evaluatedAnswers.length;
     const percentage = Math.round((score / totalQuestions) * 100);
 
     // Create attempt record

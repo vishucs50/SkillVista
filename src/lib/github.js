@@ -91,6 +91,8 @@ export async function fetchGitHubData(username, accessToken) {
 
     return {
       username,
+      avatarUrl: userInfo.avatar_url,
+      profileUrl: userInfo.html_url,
       followers: userInfo.followers,
       publicRepos: userInfo.public_repos,
       bio: userInfo.bio,
@@ -120,13 +122,13 @@ export async function analyzeGitHubProfile(userId, accessToken) {
     // Analyze languages and frameworks
     const languages = new Set();
     const frameworks = new Set();
-    const languages_data = {};
+    const languageCounts = {};
 
     githubData.repositories.forEach((repo) => {
       if (repo.language) {
         languages.add(repo.language);
-        languages_data[repo.language] =
-          (languages_data[repo.language] || 0) + repo.stargazers_count;
+        languageCounts[repo.language] =
+          (languageCounts[repo.language] || 0) + 1;
       }
 
       // Detect frameworks from repo content
@@ -138,22 +140,32 @@ export async function analyzeGitHubProfile(userId, accessToken) {
       });
     });
 
-    // Get top languages by stars
-    const topLanguages = Object.entries(languages_data)
+    const languageStats = Object.entries(languageCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([lang]) => lang);
+      .map(([name, repositories]) => ({
+        name,
+        repositories,
+        percentage: Math.round((repositories / Math.max(githubData.repositories.length, 1)) * 100),
+      }));
 
-    // Calculate contribution level
-    const totalContributions = githubData.repositories.length;
+    const topLanguages = languageStats
+      .slice(0, 5)
+      .map(({ name }) => name);
+
+    const totalRepositories = githubData.repositories.length;
+    const activeRepositories = githubData.repositories.filter((repo) => {
+      const updatedAt = new Date(repo.updated_at);
+      return !Number.isNaN(updatedAt.getTime()) &&
+        Date.now() - updatedAt.getTime() <= 180 * 24 * 60 * 60 * 1000;
+    }).length;
     const avgStars =
       githubData.repositories.reduce((sum, repo) => sum + repo.stargazers_count, 0) /
-      Math.max(totalContributions, 1);
+      Math.max(totalRepositories, 1);
 
     let contributionLevel = "low";
-    if (avgStars > 50) {
+    if (activeRepositories >= 5) {
       contributionLevel = "high";
-    } else if (avgStars > 10) {
+    } else if (activeRepositories >= 2) {
       contributionLevel = "medium";
     }
 
@@ -169,11 +181,32 @@ export async function analyzeGitHubProfile(userId, accessToken) {
     });
 
     const analyzedData = {
+      username: githubData.username,
+      avatarUrl: githubData.avatarUrl,
+      bio: githubData.bio,
+      profileUrl: githubData.profileUrl,
       topLanguages: topLanguages.length > 0 ? topLanguages : Array.from(languages).slice(0, 5),
+      languageStats,
       detectedFrameworks: Array.from(frameworks).slice(0, 8),
-      repositories: totalContributions,
+      repositories: totalRepositories,
+      repositoryList: githubData.repositories
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 24)
+        .map((repo) => ({
+          name: repo.name,
+          description: repo.description,
+          url: repo.html_url,
+          language: repo.language,
+          stars: repo.stargazers_count,
+          forks: repo.forks_count,
+          updatedAt: repo.updated_at,
+          topics: repo.topics || [],
+        })),
+      totalStars: githubData.repositories.reduce((sum, repo) => sum + repo.stargazers_count, 0),
+      totalForks: githubData.repositories.reduce((sum, repo) => sum + repo.forks_count, 0),
+      activeRepositories,
       followers: githubData.followers,
-      contributions: totalContributions,
+      contributions: activeRepositories,
       contributionLevel,
       strengthAreas: strengthAreas.slice(0, 8),
       fetchedAt: new Date(),

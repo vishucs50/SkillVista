@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,19 +15,7 @@ export default function ReviewAttempt() {
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (status === "authenticated" && params.id) {
-      fetchAttempt();
-    }
-  }, [status, params.id]);
-
-  const fetchAttempt = async () => {
+  const fetchAttempt = useCallback(async () => {
     try {
       const response = await fetch(`/api/attempts/${params.id}`);
       const data = await response.json();
@@ -40,7 +28,19 @@ export default function ReviewAttempt() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === "authenticated" && params.id) {
+      fetchAttempt();
+    }
+  }, [status, params.id, fetchAttempt]);
 
   if (status === "loading" || loading) {
     return (

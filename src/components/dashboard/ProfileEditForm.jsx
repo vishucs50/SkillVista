@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Download, Trash2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { syncAssessmentToBackend } from "@/lib/syncAssessment";
 import Image from "next/image";
 import { useEffect } from "react";
@@ -26,6 +27,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [accountMessage, setAccountMessage] = useState("");
   useEffect(() => {
     setFormData(basicDetails);
     setProfileImage(basicDetails.profileImage || null);
@@ -49,6 +51,58 @@ export default function ProfileEditForm({ isOpen, onClose }) {
         setProfileImage(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const exportAccount = async () => {
+    setAccountMessage("Preparing your export...");
+    try {
+      const response = await fetch("/api/user/export", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Could not export your data.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `skillvista-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setAccountMessage("Your data export has downloaded.");
+    } catch (error) {
+      setAccountMessage(error.message);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (
+      window.prompt(
+        'This permanently deletes your account. Type "DELETE" to confirm.',
+      ) !== "DELETE"
+    ) {
+      return;
+    }
+
+    setAccountMessage("Deleting your account...");
+    const response = await fetch("/api/user/delete", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ confirmation: "DELETE" }),
+    });
+
+    if (response.ok) {
+      await signOut({ callbackUrl: "/login" });
+    } else {
+      const data = await response.json().catch(() => ({}));
+      setAccountMessage(data.error || "Could not delete your account.");
     }
   };
 
@@ -146,6 +200,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                 { id: "education", label: "Education" },
                 { id: "career", label: "Career" },
                 { id: "experience", label: "Experience" },
+                { id: "account", label: "Account" },
               ].map((tab) => (
                 <Button
                   key={tab.id}
@@ -415,6 +470,29 @@ export default function ProfileEditForm({ isOpen, onClose }) {
                   </select>
                 </div>
               </>
+            )}
+            {activeSection === "account" && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="font-semibold">Your account data</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Download a copy of your profile, assessments, analyses, and learning progress.
+                  </p>
+                  <Button variant="outline" onClick={exportAccount} className="mt-4">
+                    <Download size={16} className="mr-2" /> Export my data
+                  </Button>
+                </div>
+                <div className="border-t pt-5">
+                  <h3 className="font-semibold text-destructive">Delete account</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Permanently removes your account and all associated SkillVista data.
+                  </p>
+                  <Button variant="destructive" onClick={deleteAccount} className="mt-4">
+                    <Trash2 size={16} className="mr-2" /> Delete account
+                  </Button>
+                </div>
+                {accountMessage && <p className="text-sm text-muted-foreground">{accountMessage}</p>}
+              </div>
             )}
             <div className="flex gap-3 pt-6 border-t">
               <Button variant="outline" onClick={onClose} className="flex-1">

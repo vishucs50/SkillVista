@@ -150,7 +150,6 @@
             session.user.githubConnected = dbUser.githubConnected;
             session.user.githubData = dbUser.githubData;
             session.user.authProvider = dbUser.authProvider;
-            session.user.githubToken = dbUser.githubToken;
             session.user.githubUsername = dbUser.githubUsername;
           }
         }

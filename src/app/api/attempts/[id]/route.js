@@ -15,8 +15,8 @@ export async function GET(request, { params }) {
     await connectDB();
 
     const { id } = await params;
-    console.log("Params ID:", params.id);
     const attempt = await MentalAbilityAttempt.findById(id)
+      .where({ userId: session.user.id })
       .populate("answers.questionId")
       .lean();
 

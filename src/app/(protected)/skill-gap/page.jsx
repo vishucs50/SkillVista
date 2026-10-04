@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RevealOnScroll from "@/components/common/RevealOnScroll";
 import { Button } from "@/components/ui/button";
 import { useSkillGapStore } from "@/store/useSkillGapStore";
@@ -11,6 +11,8 @@ import RequiredSkills from "@/components/skill-gap/RequiredSkills";
 import SkillComparison from "@/components/skill-gap/SkillComparison";
 import EmptyState from "@/components/skill-gap/EmptyState";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
+import SkillGapHistory from "@/components/skill-gap/SkillGapHistory";
+import GitHubAnalysis from "@/components/skill-gap/GithubAnalysis";
 export default function SkillGapPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -20,6 +22,9 @@ export default function SkillGapPage() {
   const setAnalysis = useSkillGapStore((s) => s.setAnalysis);
   const clearAnalysis = useSkillGapStore((s) => s.clearAnalysis);
   const [error, setError] = useState(null);
+  const [githubData, setGithubData] = useState(null);
+  const [isRefreshingGithub, setIsRefreshingGithub] = useState(false);
+  const previousUserId = useRef(null);
 
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
 
@@ -29,13 +34,13 @@ export default function SkillGapPage() {
     }
   }, [status, router]);
 
-  // Clear analysis if user session changes (new user logged in)
+  // Prevent persisted analysis from leaking between authenticated users.
   useEffect(() => {
-    if (session?.user?.id && analysis) {
-      // If we have a cached analysis, verify it's for current user
-      // If not, clear it to prevent showing old user's data to new user
+    const userId = session?.user?.id;
+    if (userId && previousUserId.current && previousUserId.current !== userId) {
       clearAnalysis();
     }
+    if (userId) previousUserId.current = userId;
   }, [session?.user?.id, clearAnalysis]);
 
 const handleAnalyze = async (targetRole, experienceLevel) => {
@@ -51,6 +56,8 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
         const githubInfo = await githubRes.json();
         if (githubInfo.githubConnected && githubInfo.githubData) {
           githubData = {
+            ...githubInfo.githubData,
+            username: githubInfo.githubUsername || githubInfo.githubData.username,
             topLanguages: githubInfo.githubData.topLanguages || [],
             detectedFrameworks: githubInfo.githubData.detectedFrameworks || [],
             repositories: githubInfo.githubData.repositories || 0,
@@ -58,6 +65,7 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
             strengthAreas: githubInfo.githubData.strengthAreas || [],
             contributionLevel: githubInfo.githubData.contributionLevel || "low",
           };
+          setGithubData(githubData);
         }
       }
     } catch (err) {
@@ -84,13 +92,31 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
     }
 
     const data = await res.json();
-    setAnalysis(data); // ✅ Zustand persists it
+    setAnalysis({ ...data, githubData });
   } catch (err) {
     setError(err.message);
   } finally {
     setIsLoading(false);
   }
 };
+
+  const refreshGithub = async () => {
+    setIsRefreshingGithub(true);
+    try {
+      const response = await fetch("/api/github/analyze", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not refresh GitHub analysis");
+      if (result.githubConnected && result.githubData) {
+        const refreshed = { ...result.githubData, username: result.githubUsername || result.githubData.username };
+        setGithubData(refreshed);
+        if (analysis) setAnalysis({ ...analysis, githubData: refreshed });
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsRefreshingGithub(false);
+    }
+  };
 
   if (status === "loading") {
     return (
@@ -116,6 +142,8 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
           Discover where you stand and what to learn next for your dream role
         </p>
       </div>
+
+      <SkillGapHistory onSelect={setAnalysis} />
 
       {/* Role Selection */}
       <RevealOnScroll>
@@ -161,6 +189,16 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
       {/* Results */}
       {analysis && !isLoading && (
         <div className="space-y-8 mb-5">
+          {(githubData || analysis.githubData) && (
+            <RevealOnScroll>
+              <GitHubAnalysis
+                data={githubData || analysis.githubData}
+                comparison={analysis.skillComparison}
+                onRefresh={refreshGithub}
+                isRefreshing={isRefreshingGithub}
+              />
+            </RevealOnScroll>
+          )}
           {/* <RevealOnScroll>
             <RequiredSkills data={analysis.requiredSkills} />
           </RevealOnScroll> */}

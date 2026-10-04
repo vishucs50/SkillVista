@@ -21,7 +21,6 @@ const TOTAL_STEPS = 6;
 
 export default function StepperLayout() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -71,22 +70,19 @@ export default function StepperLayout() {
     loadAssessmentData();
   }, [session?.user?.id, setBasicDetails, setAptitudeAnswers, resetAll]);
 
-  /* ===== HYDRATION ===== */
+  /* ===== STEP PERSIST ===== */
   useEffect(() => {
     const saved = localStorage.getItem("skillvista-step");
     const step = Number(saved);
 
     if (!Number.isNaN(step) && step >= 0 && step < TOTAL_STEPS) {
-      setCurrentStep(step);
+      queueMicrotask(() => setCurrentStep(step));
     }
-    setHydrated(true);
   }, []);
 
-  /* ===== STEP PERSIST ===== */
   useEffect(() => {
-    if (!hydrated) return;
     localStorage.setItem("skillvista-step", currentStep);
-  }, [currentStep, hydrated]);
+  }, [currentStep]);
 
   const nextStep = () =>
     setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
@@ -115,8 +111,6 @@ export default function StepperLayout() {
         return null;
     }
   };
-
-  if (!hydrated) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

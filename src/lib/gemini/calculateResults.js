@@ -2,8 +2,13 @@ export function calculateResults(assessment) {
   const { basicDetails, aptitudeAnswers } = assessment;
 
   /* ---------- APTITUDE SCORE ---------- */
+  const correctAnswers = { q1: 2, q2: 2, q3: 1 };
+  const aptitudeQuestionIds = Object.keys(correctAnswers);
+  const correctCount = aptitudeQuestionIds.filter(
+    (questionId) => aptitudeAnswers?.[questionId] === correctAnswers[questionId],
+  ).length;
   const aptitudeScore = Math.round(
-    (Object.keys(aptitudeAnswers).length / 3) * 100,
+    (correctCount / aptitudeQuestionIds.length) * 100,
   );
 
   /* ---------- READINESS ---------- */
@@ -20,10 +25,10 @@ export function calculateResults(assessment) {
   return {
     aptitudeScore,
     readinessBreakdown: {
-      projects: basicDetails.projectExperience,
-      resume: basicDetails.resumeStatus,
-      interviews: basicDetails.interviewExperience,
-      timeCommitment: basicDetails.weeklyHours,
+      skills: Math.min((basicDetails.skills?.length || 0) * 10, 100),
+      aptitude: aptitudeScore,
+      experience: basicDetails.projectExperience === "End-to-end projects" ? 100 : 50,
+      consistency: basicDetails.weeklyHours === "5–7 hours" ? 100 : 50,
     },
     employabilityIndex,
   };

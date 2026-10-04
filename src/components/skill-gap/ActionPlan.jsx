@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -8,8 +8,31 @@ import { Check, Clock, ExternalLink, ArrowRight } from "lucide-react";
 
 export default function ActionPlan({ actions, roadmap, projectIdea }) {
   const [expanded, setExpanded] = useState(false);
+  const [completed, setCompleted] = useState({});
+
+  useEffect(() => {
+    fetch("/api/learning-path/progress")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setCompleted(Object.fromEntries(
+        (data.progress || []).map((item) => [item.actionKey, item.completed]),
+      )))
+      .catch(() => {});
+  }, []);
 
   if (!actions || actions.length === 0) return null;
+
+  const actionKey = (action) => `${action.title}|${action.description || ""}`;
+  const toggleAction = async (action) => {
+    const key = actionKey(action);
+    const next = !completed[key];
+    setCompleted((current) => ({ ...current, [key]: next }));
+    const response = await fetch("/api/learning-path/progress", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actionKey: key, completed: next }),
+    });
+    if (!response.ok) setCompleted((current) => ({ ...current, [key]: !next }));
+  };
 
   const visibleActions = expanded ? actions : actions.slice(0, 2);
 
@@ -24,12 +47,25 @@ export default function ActionPlan({ actions, roadmap, projectIdea }) {
         <CardContent className="space-y-3">
           {visibleActions.map((action, idx) => (
             <motion.div
-              key={idx}
+              key={actionKey(action) || idx}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="rounded-lg border p-4 bg-muted/30"
             >
-              <h4 className="text-sm font-semibold">{action.title}</h4>
+              <button
+                type="button"
+                onClick={() => toggleAction(action)}
+                className="flex w-full items-center gap-2 text-left"
+              >
+                <span className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                  completed[actionKey(action)] ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                }`}>
+                  {completed[actionKey(action)] && <Check size={13} />}
+                </span>
+                <h4 className={`text-sm font-semibold ${completed[actionKey(action)] ? "text-muted-foreground line-through" : ""}`}>
+                  {action.title}
+                </h4>
+              </button>
               <p className="text-xs text-muted-foreground mt1">
                 {action.description}
               </p>

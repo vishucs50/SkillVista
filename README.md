@@ -38,6 +38,11 @@ SkillVista is a modern Next.js application that helps assess and surface employa
   - Resource suggestions for skill development
 - **Assessment Results** with detailed performance analytics
 - **Real-time synchronization** of assessment and results data
+- **Resume and job matching** with AI-generated strengths, missing skills, and keyword recommendations
+- **Interview preparation** with role-specific technical, behavioral, and scenario questions
+- **Learning progress tracking** with persistent action completion
+- **Skill-gap analysis history** for comparing progress across roles and time
+- **Account data controls** for exporting or deleting personal data
 
 ## Quick start
 
@@ -171,10 +176,9 @@ Server routes live under `src/app/api`:
   - Connect GitHub account
   - Analyze repositories
   - Monitor skill development
+- **Career Match** — Paste a resume and job description to identify alignment and missing keywords
+- **Interview Prep** — Generate an interview practice set for a target role
 
 ## Deployment
 
 This app is ready for Vercel or any Node.js/Next.js hosting. Ensure environment variables are configured in the target environment.
-
-hello world
-

@@ -20,6 +20,8 @@ const navItems = [
   { label: "Skill Gaps", href: "/skill-gap", icon: Target },
   { label: "Learning Path", href: "/learning-path", icon: BookOpen },
   { label: "Req Skills", href: "/required-skill", icon: ClipboardList },
+  { label: "Career Match", href: "/career-match", icon: BarChart3 },
+  { label: "Interview Prep", href: "/interview-prep", icon: Target },
 ];
 
 export default function NavBubble() {

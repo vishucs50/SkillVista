@@ -1,16 +1,18 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable");
-}
-
 export const connectDB = async () => {
+  const mongoUri = process.env.MONGODB_URI?.trim();
+
+  if (!mongoUri) {
+    throw new Error(
+      "MONGODB_URI is not available at runtime. Add it to the deployed Amplify branch and redeploy.",
+    );
+  }
+
   if (mongoose.connection.readyState >= 1) return;
 
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(mongoUri);
     console.log("✅ MongoDB connected");
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);

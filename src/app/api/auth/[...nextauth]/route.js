@@ -3,6 +3,7 @@
   import GitHubProvider from "next-auth/providers/github";
   import CredentialsProvider from "next-auth/providers/credentials";
   import bcrypt from "bcryptjs";
+  import mongoose from "mongoose";
 
   import User from "@/models/User";
   import Assessment from "@/models/Assessment";
@@ -55,68 +56,82 @@
 
     callbacks: {
       async signIn({ user, account, profile }) {
-        await connectDB();
-
-        if (account.provider === "google") {
-          const existingUser = await User.findOne({ email: user.email });
-          if (!existingUser) {
-            await User.create({
-              name: user.name,
-              email: user.email,
-              password: null,
-              authProvider: "google",
-            });
-          } else if (!existingUser.authProvider) {
-            existingUser.authProvider = "google";
-            await existingUser.save();
+        try {
+          if (!account?.provider || !user?.email) {
+            console.error("[nextauth/signIn] Missing provider or user email");
+            return false;
           }
-        }
 
-        if (account.provider === "github") {
-          const existingUser = await User.findOne({ email: user.email });
-          const githubUsername = profile.login ;
+          await connectDB();
+          console.log("[nextauth/signIn] Database connection ready", {
+            provider: account.provider,
+            hasGoogleCredentials:
+              Boolean(process.env.GOOGLE_CLIENT_ID) &&
+              Boolean(process.env.GOOGLE_CLIENT_SECRET),
+            hasMongoUri: Boolean(process.env.MONGODB_URI),
+          });
 
-          if (!existingUser) {
-            // Create new user with GitHub data
-            const newUser = await User.create({
-              name: user.name,
-              email: user.email,
-              password: null,
-              githubId: account.providerAccountId,
-              githubUsername: githubUsername,
-              githubToken: account.access_token,
-              githubConnected: true,
-              authProvider: "github",
-            });
-            user.id = newUser._id.toString();
+          if (account.provider === "google") {
+            let existingUser = await User.findOne({ email: user.email });
+            if (!existingUser) {
+              existingUser = await User.create({
+                name: user.name,
+                email: user.email,
+                password: null,
+                authProvider: "google",
+              });
+            } else if (!existingUser.authProvider) {
+              existingUser.authProvider = "google";
+              await existingUser.save();
+            }
 
-            // Analyze GitHub profile async (non-blocking)
-            analyzeGitHubProfile(newUser._id.toString(), account.access_token).catch(
-              (err) => console.error("GitHub analysis failed:", err)
-            );
-          } else {
-            // Update existing user with GitHub data if not already connected
-            const updated = await User.findByIdAndUpdate(
-              existingUser._id,
-              {
+            // Use the MongoDB ID in the JWT, not Google's provider account ID.
+            user.id = existingUser._id.toString();
+          } else if (account.provider === "github") {
+            const existingUser = await User.findOne({ email: user.email });
+            const githubUsername = profile?.login || user.name;
+            let githubUser;
+
+            if (!existingUser) {
+              githubUser = await User.create({
+                name: user.name,
+                email: user.email,
                 githubId: account.providerAccountId,
-                githubUsername: githubUsername,
+                githubUsername,
                 githubToken: account.access_token,
                 githubConnected: true,
-                authProvider: existingUser.authProvider || "github",
-              },
-              { new: true }
-            );
-            user.id = updated._id.toString();
+                authProvider: "github",
+              });
+            } else {
+              githubUser = await User.findByIdAndUpdate(
+                existingUser._id,
+                {
+                  githubId: account.providerAccountId,
+                  githubUsername,
+                  githubToken: account.access_token,
+                  githubConnected: true,
+                  authProvider: existingUser.authProvider || "github",
+                },
+                { new: true },
+              );
+            }
 
-            // Analyze GitHub profile async
-            analyzeGitHubProfile(updated._id.toString(), account.access_token).catch(
+            user.id = githubUser._id.toString();
+
+            // Analyze GitHub profile asynchronously after authentication succeeds.
+            analyzeGitHubProfile(githubUser._id.toString(), account.access_token).catch(
               (err) => console.error("GitHub analysis failed:", err)
             );
           }
-        }
 
-        return true;
+          return true;
+        } catch (error) {
+          console.error("[nextauth/signIn] Provider callback failed", {
+            provider: account?.provider,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        }
       },
 
       async jwt({ token, user }) {
@@ -125,7 +140,7 @@
           return token;
         }
 
-        if (token.email) {
+        if (token.email && !mongoose.Types.ObjectId.isValid(token.id)) {
           await connectDB();
           const dbUser = await User.findOne({ email: token.email });
           if (dbUser) {
@@ -137,21 +152,35 @@
       },
 
       async session({ session, token }) {
-        if (session.user && token.id) {
-          session.user.id = token.id;
+        if (!session.user) return session;
 
+        try {
           await connectDB();
-          const dbUser = await User.findById(token.id).lean();
 
-          if (dbUser) {
-            session.user.hasAssessment = !!await Assessment.findOne({
-              userId: token.id,
-            }).lean();
-            session.user.githubConnected = dbUser.githubConnected;
-            session.user.githubData = dbUser.githubData;
-            session.user.authProvider = dbUser.authProvider;
-            session.user.githubUsername = dbUser.githubUsername;
+          const dbUser = mongoose.Types.ObjectId.isValid(token.id)
+            ? await User.findById(token.id).lean()
+            : await User.findOne({ email: session.user.email }).lean();
+
+          if (!dbUser) {
+            console.error("[nextauth/session] User record not found", {
+              hasTokenId: Boolean(token.id),
+              hasEmail: Boolean(session.user.email),
+            });
+            return session;
           }
+
+          session.user.id = dbUser._id.toString();
+          session.user.hasAssessment = !!await Assessment.findOne({
+            userId: dbUser._id,
+          }).lean();
+          session.user.githubConnected = dbUser.githubConnected;
+          session.user.githubData = dbUser.githubData;
+          session.user.authProvider = dbUser.authProvider;
+          session.user.githubUsername = dbUser.githubUsername;
+        } catch (error) {
+          console.error("[nextauth/session] Failed to build session", {
+            message: error instanceof Error ? error.message : String(error),
+          });
         }
 
         return session;

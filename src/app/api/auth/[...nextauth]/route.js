@@ -20,6 +20,9 @@
       GitHubProvider({
         clientId: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        authorization: {
+          params: { scope: "read:user user:email" },
+        },
         allowDangerousEmailAccountLinking: true,
       }),
 
@@ -57,8 +60,8 @@
     callbacks: {
       async signIn({ user, account, profile }) {
         try {
-          if (!account?.provider || !user?.email) {
-            console.error("[nextauth/signIn] Missing provider or user email");
+          if (!account?.provider) {
+            console.error("[nextauth/signIn] Missing provider");
             return false;
           }
 
@@ -72,6 +75,11 @@
           });
 
           if (account.provider === "google") {
+            if (!user.email) {
+              console.error("[nextauth/signIn] Google did not return an email");
+              return false;
+            }
+
             let existingUser = await User.findOne({ email: user.email });
             if (!existingUser) {
               existingUser = await User.create({
@@ -88,14 +96,26 @@
             // Use the MongoDB ID in the JWT, not Google's provider account ID.
             user.id = existingUser._id.toString();
           } else if (account.provider === "github") {
-            const existingUser = await User.findOne({ email: user.email });
             const githubUsername = profile?.login || user.name;
+            const githubEmail =
+              user.email ||
+              profile?.email ||
+              (profile?.id
+                ? `${profile.id}+${githubUsername}@users.noreply.github.com`
+                : null);
+
+            if (!githubEmail || !githubUsername) {
+              console.error("[nextauth/signIn] GitHub profile is missing identity data");
+              return false;
+            }
+
+            const existingUser = await User.findOne({ email: githubEmail });
             let githubUser;
 
             if (!existingUser) {
               githubUser = await User.create({
                 name: user.name,
-                email: user.email,
+                email: githubEmail,
                 githubId: account.providerAccountId,
                 githubUsername,
                 githubToken: account.access_token,

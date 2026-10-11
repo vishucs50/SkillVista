@@ -16,7 +16,9 @@ export default function ConnectGithub({ onConnected }) {
 
   const handleGitHubLogin = async () => {
     // Trigger GitHub OAuth signin
-    await signIn("github", { redirect: false });
+    await signIn("github", {
+      callbackUrl: "/skill-progress",
+    });
   };
 
   const handleManualConnect = async (e) => {

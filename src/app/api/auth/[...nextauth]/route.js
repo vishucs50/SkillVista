@@ -20,7 +20,7 @@
       GitHubProvider({
         clientId: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        issuer: "https://github.com",
+        issuer: "https://github.com/login/oauth",
         authorization: {
           params: { scope: "read:user user:email" },
         },

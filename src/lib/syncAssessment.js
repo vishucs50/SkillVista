@@ -6,10 +6,9 @@ export const syncAssessmentToBackend = async () => {
 
   if (
     !basicDetails ||
-    Object.keys(basicDetails).length === 0 ||
-    Object.keys(aptitudeAnswers || {}).length === 0
+    Object.keys(basicDetails).length === 0
   ) {
-    console.warn("Assessment sync skipped: empty data");
+    console.warn("Assessment sync skipped: empty basic details");
     return;
   }
 

@@ -48,13 +48,18 @@ export async function POST(req) {
     };
 
 
+    const update = {
+      userId,
+      basicDetails: mergedBasic,
+    };
+
+    if (body.aptitudeAnswers && typeof body.aptitudeAnswers === "object") {
+      update.aptitudeAnswers = body.aptitudeAnswers;
+    }
+
     await Assessment.findOneAndUpdate(
       { userId },
-      {
-        userId,
-        basicDetails: mergedBasic,
-        aptitudeAnswers: body.aptitudeAnswers,
-      },
+      update,
       {
         upsert: true,
         new: true,

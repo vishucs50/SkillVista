@@ -60,7 +60,9 @@ export default function AdminPage() {
       const response = await fetch(`/api/admin/overview?days=${days}`);
       const payload = await response.json();
       if (response.status === 403) {
-        router.replace("/dashboard");
+        setError(
+          `Admin access denied. Session email found: ${payload.diagnostics?.hasSessionEmail ? "yes" : "no"}. Configured admin emails: ${payload.diagnostics?.configuredAdminCount ?? 0}. Match: ${payload.diagnostics?.emailMatches ? "yes" : "no"}.`,
+        );
         return;
       }
       if (!response.ok) throw new Error(payload.error || "Could not load admin data");

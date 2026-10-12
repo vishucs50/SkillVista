@@ -11,10 +11,19 @@ export function getAdminEmails() {
 export async function requireAdmin() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.toLowerCase();
+  const adminEmails = getAdminEmails();
 
-  if (!email || !getAdminEmails().includes(email)) {
-    return { session: null, authorized: false };
+  if (!email || !adminEmails.includes(email)) {
+    return {
+      session: null,
+      authorized: false,
+      diagnostics: {
+        hasSessionEmail: Boolean(email),
+        configuredAdminCount: adminEmails.length,
+        emailMatches: Boolean(email && adminEmails.includes(email)),
+      },
+    };
   }
 
-  return { session, authorized: true };
+  return { session, authorized: true, diagnostics: null };
 }

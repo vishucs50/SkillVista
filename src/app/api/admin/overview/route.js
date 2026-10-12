@@ -8,9 +8,13 @@ import SkillGapAnalysis from "@/models/SkillGapAnalysis";
 import MentalAbilityAttempt from "@/models/MentalAbilityAttempt";
 
 export async function GET(req) {
-  const { authorized } = await requireAdmin();
+  const { authorized, diagnostics } = await requireAdmin();
   if (!authorized) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    console.warn("[api/admin/overview] Unauthorized admin request", diagnostics);
+    return NextResponse.json(
+      { error: "Forbidden", diagnostics },
+      { status: 403 },
+    );
   }
 
   try {

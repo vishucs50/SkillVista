@@ -56,6 +56,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
                 alt="Candidate profile"
                 fill
                 sizes="40px"
+                unoptimized
                 className="object-cover"
               />
             </div>

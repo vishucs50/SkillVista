@@ -44,6 +44,7 @@ export default function Header() {
                 alt="Profile"
                 fill
                 sizes="36px"
+                unoptimized
                 className="object-cover"
               />
             </div>

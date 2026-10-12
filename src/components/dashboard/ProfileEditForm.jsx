@@ -22,6 +22,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   const [profileImage, setProfileImage] = useState(
     basicDetails.profileImage || null,
   );
+  const [profileFile, setProfileFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(
     basicDetails.profileImage || "/download.jpeg",
   );
@@ -45,12 +46,8 @@ export default function ProfileEditForm({ isOpen, onClose }) {
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-        setProfileImage(reader.result);
-      };
-      reader.readAsDataURL(file);
+      setProfileFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -111,15 +108,32 @@ export default function ProfileEditForm({ isOpen, onClose }) {
       setIsSaving(true);
       let uploadedImageUrl = profileImage;
 
-      if (profileImage?.startsWith("data:image")) {
+      if (profileFile) {
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: profileImage }),
+          body: JSON.stringify({
+            fileName: profileFile.name,
+            contentType: profileFile.type,
+            size: profileFile.size,
+          }),
         });
 
         const uploadData = await uploadRes.json();
-        uploadedImageUrl = uploadData.url;
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "Could not prepare image upload");
+        }
+
+        const s3Res = await fetch(uploadData.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": profileFile.type },
+          body: profileFile,
+        });
+        if (!s3Res.ok) {
+          throw new Error("Could not upload image to storage");
+        }
+
+        uploadedImageUrl = uploadData.fileUrl;
       }
 
       const updatedData = {
@@ -130,6 +144,7 @@ export default function ProfileEditForm({ isOpen, onClose }) {
       const roleChanged = basicDetails?.targetRole !== updatedData?.targetRole;
 
       setBasicDetails(updatedData);
+      setProfileFile(null);
 
       if (roleChanged) {
         try {

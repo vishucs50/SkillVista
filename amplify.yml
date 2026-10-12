@@ -7,6 +7,15 @@ frontend:
     build:
       commands:
         - |
+          required_vars="MONGODB_URI NEXTAUTH_SECRET NEXTAUTH_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET AWS_REGION S3_BUCKET_NAME AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY"
+          for variable in $required_vars; do
+            if [ -z "$(printenv "$variable")" ]; then
+              echo "Missing required Amplify environment variable: $variable"
+              exit 1
+            fi
+          done
+          echo "Required application and S3 environment variables are present"
+        - |
           printf '%s\n' \
             "MONGODB_URI=$MONGODB_URI" \
             "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" \
@@ -15,6 +24,10 @@ frontend:
             "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
             "GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID" \
             "GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" \
+            "AWS_REGION=$AWS_REGION" \
+            "S3_BUCKET_NAME=$S3_BUCKET_NAME" \
+            "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
+            "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
             "GEMINI_API_KEY=$GEMINI_API_KEY" \
             > .env.production
         - npm run build

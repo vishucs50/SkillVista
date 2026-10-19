@@ -34,56 +34,59 @@ export async function getCloudWatchSummary({ startTime, endTime }) {
         EndTime: endTime,
         ScanBy: "TimestampDescending",
         MetricDataQueries: [
-          {
-            Id: "invocations",
-            MetricStat: {
-              Metric: {
-                Namespace: "AWS/Lambda",
-                MetricName: "Invocations",
-                Dimensions: [],
-              },
-              Period: 3600,
-              Stat: "Sum",
+          ["invocations", "Invocations", "Sum"],
+          ["errors", "Errors", "Sum"],
+          ["throttles", "Throttles", "Sum"],
+          ["durationAverage", "Duration", "Average"],
+          ["durationMaximum", "Duration", "Maximum"],
+          ["concurrency", "ConcurrentExecutions", "Maximum"],
+        ].map(([id, metricName, stat]) => ({
+          Id: id,
+          MetricStat: {
+            Metric: {
+              Namespace: "AWS/Lambda",
+              MetricName: metricName,
+              Dimensions: [],
             },
-            ReturnData: true,
+            Period: 3600,
+            Stat: stat,
           },
-          {
-            Id: "errors",
-            MetricStat: {
-              Metric: {
-                Namespace: "AWS/Lambda",
-                MetricName: "Errors",
-                Dimensions: [],
-              },
-              Period: 3600,
-              Stat: "Sum",
-            },
-            ReturnData: true,
-          },
-          {
-            Id: "duration",
-            MetricStat: {
-              Metric: {
-                Namespace: "AWS/Lambda",
-                MetricName: "Duration",
-                Dimensions: [],
-              },
-              Period: 3600,
-              Stat: "Average",
-            },
-            ReturnData: true,
-          },
-        ],
+          ReturnData: true,
+        })),
       }),
     );
 
+    const metrics = (response.MetricDataResults || []).map((metric) => ({
+      id: metric.Id,
+      label: metric.Label || metric.Id,
+      values: metric.Values || [],
+      timestamps: metric.Timestamps || [],
+    }));
+    const byId = Object.fromEntries(metrics.map((metric) => [metric.id, metric]));
+    const sum = (metric) =>
+      (metric?.values || []).reduce((total, value) => total + value, 0);
+    const latest = (metric) => (metric?.values || [])[0] || 0;
+    const invocations = sum(byId.invocations);
+    const errors = sum(byId.errors);
+
     return {
       configured: true,
-      metrics: (response.MetricDataResults || []).map((metric) => ({
-        id: metric.Id,
-        values: metric.Values || [],
-        timestamps: metric.Timestamps || [],
-      })),
+      metrics,
+      summary: {
+        invocations,
+        errors,
+        throttles: sum(byId.throttles),
+        errorRate: invocations ? (errors / invocations) * 100 : 0,
+        averageDuration: byId.durationAverage?.values?.length
+          ? sum(byId.durationAverage) / byId.durationAverage.values.length
+          : 0,
+        maximumDuration: Math.max(...(byId.durationMaximum?.values || [0])),
+        peakConcurrency: Math.max(...(byId.concurrency?.values || [0])),
+        latestTimestamp:
+          byId.invocations?.timestamps?.[0] ||
+          byId.errors?.timestamps?.[0] ||
+          null,
+      },
     };
   } catch (error) {
     console.error("[admin/cloudwatch] Metrics query failed", {

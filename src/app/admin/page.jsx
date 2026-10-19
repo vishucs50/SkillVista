@@ -45,6 +45,15 @@ function StatCard({ item, value }) {
   );
 }
 
+function formatNumber(value, maximumFractionDigits = 0) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(value || 0);
+}
+
+function formatDuration(value) {
+  if (!value) return "0 ms";
+  return `${formatNumber(value, 0)} ms`;
+}
+
 export default function AdminPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -153,16 +162,56 @@ export default function AdminPage() {
           {!data?.cloudWatch?.configured ? (
             <p className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">CloudWatch is not configured. Add the read-only CloudWatch permission to the server IAM identity.</p>
           ) : data.cloudWatch.error ? (
-            <p className="rounded-lg bg-amber-500/10 p-4 text-sm text-amber-700">{data.cloudWatch.error}</p>
+                <p className="rounded-lg bg-amber-500/10 p-4 text-sm text-amber-700">{data.cloudWatch.error}</p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
-              {(data.cloudWatch.metrics || []).map((metric) => (
-                <div key={metric.id} className="rounded-xl bg-muted/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{metric.id}</p>
-                  <p className="mt-2 text-2xl font-semibold">{metric.values.reduce((sum, value) => sum + value, 0).toFixed(metric.id === "duration" ? 0 : 0)}</p>
+                <div className="space-y-5">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Invocations</p>
+                      <p className="mt-2 text-2xl font-semibold">{formatNumber(data.cloudWatch.summary?.invocations)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Total Lambda requests</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Errors</p>
+                      <p className="mt-2 text-2xl font-semibold text-rose-500">{formatNumber(data.cloudWatch.summary?.errors)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatNumber(data.cloudWatch.summary?.errorRate, 2)}% error rate</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p>
+                      <p className="mt-2 text-2xl font-semibold">{formatDuration(data.cloudWatch.summary?.averageDuration)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Average execution time</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Peak concurrency</p>
+                      <p className="mt-2 text-2xl font-semibold">{formatNumber(data.cloudWatch.summary?.peakConcurrency)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatNumber(data.cloudWatch.summary?.throttles)} throttles</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {(data.cloudWatch.metrics || [])
+                      .filter((metric) => !["invocations", "errors", "durationAverage", "concurrency"].includes(metric.id))
+                      .map((metric) => (
+                        <div key={metric.id} className="rounded-xl border border-border/60 p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {metric.id === "durationMaximum" ? "Maximum duration" : "Throttles"}
+                            </p>
+                            <span className="text-xs text-muted-foreground">
+                              {metric.id === "durationMaximum" ? "peak" : "total"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xl font-semibold">
+                            {metric.id === "durationMaximum"
+                              ? formatDuration(Math.max(...(metric.values || [0])))
+                              : formatNumber((metric.values || []).reduce((sum, value) => sum + value, 0))}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Values are aggregated from the AWS/Lambda metrics available to the configured CloudWatch identity for the selected period.
+                  </p>
                 </div>
-              ))}
-            </div>
           )}
         </section>
       </div>

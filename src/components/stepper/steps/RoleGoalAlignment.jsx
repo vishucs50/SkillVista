@@ -9,6 +9,10 @@ export default function RoleGoalAlignment({ onNext, onBack }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "targetRole" && value !== basicDetails?.targetRole) {
+      setBasicDetails({ targetRole: value, skills: [] });
+      return;
+    }
     setBasicDetails({ [name]: value });
   };
 
@@ -38,6 +42,7 @@ export default function RoleGoalAlignment({ onNext, onBack }) {
           >
             <option value="">Select</option>
             <option>Software Developer</option>
+            <option>Software Engineer</option>
             <option>Frontend Developer</option>
             <option>Backend Developer</option>
             <option>Data Analyst</option>

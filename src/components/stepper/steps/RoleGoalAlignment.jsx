@@ -5,12 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
 
 export default function RoleGoalAlignment({ onNext, onBack }) {
-  const { basicDetails, setBasicDetails } = useAssessmentStore();
+  const {
+    basicDetails,
+    setBasicDetails,
+    clearAptitudeAnswers,
+    setAptitudeQuestionSet,
+  } = useAssessmentStore();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "targetRole" && value !== basicDetails?.targetRole) {
       setBasicDetails({ targetRole: value, skills: [] });
+      clearAptitudeAnswers();
+      setAptitudeQuestionSet([], 0);
       return;
     }
     setBasicDetails({ [name]: value });

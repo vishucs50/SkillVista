@@ -56,6 +56,12 @@ export async function POST(req) {
     if (body.aptitudeAnswers && typeof body.aptitudeAnswers === "object") {
       update.aptitudeAnswers = body.aptitudeAnswers;
     }
+    if (Array.isArray(body.aptitudeQuestionIds)) {
+      update.aptitudeQuestionIds = body.aptitudeQuestionIds;
+    }
+    if (Number.isInteger(body.aptitudeQuestionVersion)) {
+      update.aptitudeQuestionVersion = body.aptitudeQuestionVersion;
+    }
 
     await Assessment.findOneAndUpdate(
       { userId },

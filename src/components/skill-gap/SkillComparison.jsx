@@ -3,7 +3,15 @@
 import { useState, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Check, X, AlertTriangle, Minus, GitCompare } from "lucide-react";
+import {
+  Check,
+  X,
+  AlertTriangle,
+  Minus,
+  GitCompare,
+  Plus,
+  Loader2,
+} from "lucide-react";
 
 const CIRCUMFERENCE = 264;
 
@@ -74,7 +82,12 @@ function GapStatusBadge({ status }) {
   );
 }
 
-export default function SkillComparison({ matchPercentage, comparison }) {
+export default function SkillComparison({
+  matchPercentage,
+  comparison,
+  onAddSkill,
+  pendingSkill,
+}) {
   const [filter, setFilter] = useState("Critical Gap");
 
   const filteredData = useMemo(() => {
@@ -176,8 +189,24 @@ export default function SkillComparison({ matchPercentage, comparison }) {
 
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <div className="flex justify-center items-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
                           <GapStatusBadge status={item.gapStatus} />
+                          {!item.userHas && onAddSkill && (
+                            <button
+                              type="button"
+                              onClick={() => onAddSkill(item.skill)}
+                              disabled={pendingSkill === item.skill}
+                              className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-xs font-medium text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"
+                              aria-label={`Add ${item.skill} to my skills`}
+                            >
+                              {pendingSkill === item.skill ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Plus size={13} />
+                              )}
+                              Add skill
+                            </button>
+                          )}
                         </div>
                       </td>
                     </motion.tr>

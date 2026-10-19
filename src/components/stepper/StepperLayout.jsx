@@ -29,6 +29,9 @@ export default function StepperLayout() {
   const resetAll = useAssessmentStore((s) => s.resetAll);
   const setBasicDetails = useAssessmentStore((s) => s.setBasicDetails);
   const setAptitudeAnswers = useAssessmentStore((s) => s.setAptitudeAnswers);
+  const setAptitudeQuestionSet = useAssessmentStore(
+    (s) => s.setAptitudeQuestionSet,
+  );
 
   const finishAssessment = () => {
     const results = calculateResults(assessment);
@@ -55,6 +58,14 @@ export default function StepperLayout() {
           if (data.assessment.aptitudeAnswers) {
             setAptitudeAnswers(data.assessment.aptitudeAnswers);
           }
+          if (Array.isArray(data.assessment.aptitudeQuestionIds)) {
+            setAptitudeQuestionSet(
+              data.assessment.aptitudeQuestionIds,
+              data.assessment.aptitudeQuestionVersion || 0,
+            );
+          } else {
+            setAptitudeQuestionSet([], 0);
+          }
         } else {
           // New user, reset the store
           resetAll();
@@ -68,7 +79,13 @@ export default function StepperLayout() {
     };
 
     loadAssessmentData();
-  }, [session?.user?.id, setBasicDetails, setAptitudeAnswers, resetAll]);
+  }, [
+    session?.user?.id,
+    setBasicDetails,
+    setAptitudeAnswers,
+    setAptitudeQuestionSet,
+    resetAll,
+  ]);
 
   /* ===== STEP PERSIST ===== */
   useEffect(() => {

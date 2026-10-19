@@ -1,8 +1,12 @@
 import { useAssessmentStore } from "@/store/useAssessmentStore";
 
 export const syncAssessmentToBackend = async () => {
-  const { basicDetails, aptitudeAnswers } =
-    useAssessmentStore.getState();
+  const {
+    basicDetails,
+    aptitudeAnswers,
+    aptitudeQuestionIds,
+    aptitudeQuestionVersion,
+  } = useAssessmentStore.getState();
 
   if (
     !basicDetails ||
@@ -12,15 +16,23 @@ export const syncAssessmentToBackend = async () => {
     return;
   }
 
-  console.debug("[syncAssessment] payload", { basicDetails, aptitudeAnswers });
+  console.debug("[syncAssessment] payload", {
+    basicDetails,
+    aptitudeAnswers,
+    aptitudeQuestionIds,
+    aptitudeQuestionVersion,
+  });
 
   const res = await fetch("/api/assessment/sync", {
     method: "POST",
     headers : { "Content-Type": "application/json" },
     credentials: "include",
+    keepalive: true,
     body: JSON.stringify({
       basicDetails,
       aptitudeAnswers,
+      aptitudeQuestionIds,
+      aptitudeQuestionVersion,
     }),
   });
 

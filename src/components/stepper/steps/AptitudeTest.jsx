@@ -1,68 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
+import {
+  assessmentQuestionVersion,
+  getQuestionsForRole,
+} from "@/lib/assessmentQuestions";
 
-const QUESTIONS = [
-  {
-    id: "q1",
-    question:
-      "If a project takes 10 days and is delayed by 20%, how many days will it take?",
-    options: ["10 days", "11 days", "12 days", "14 days"],
-    correct: 2,
-  },
-  {
-    id: "q2",
-    question: "A train travels 60 km in 1.5 hours. What is its average speed?",
-    options: ["30 km/h", "35 km/h", "40 km/h", "45 km/h"],
-    correct: 2,
-  },
-  {
-    id: "q3",
-    question:
-      "If all developers are engineers and some engineers are designers, which is true?",
-    options: [
-      "All developers are designers",
-      "Some developers may be designers",
-      "No developer is a designer",
-      "All designers are engineers",
-    ],
-    correct: 1,
-  },
-];
+function stableShuffle(questions, seed) {
+  return [...questions].sort((a, b) => {
+    const score = (id) =>
+      [...`${seed}:${id}`].reduce(
+        (total, character) => (total * 31 + character.charCodeAt(0)) % 1000003,
+        7,
+      );
+    return score(a.id) - score(b.id);
+  });
+}
 
 export default function AptitudeTest({ onNext, onBack }) {
-  const { aptitudeAnswers, setAptitudeAnswers } = useAssessmentStore();
+  const {
+    basicDetails,
+    aptitudeAnswers,
+    aptitudeQuestionIds,
+    aptitudeQuestionVersion,
+    setAptitudeAnswers,
+    setAptitudeQuestionSet,
+  } = useAssessmentStore();
+  const availableQuestions = useMemo(
+    () => getQuestionsForRole(basicDetails?.targetRole),
+    [basicDetails?.targetRole],
+  );
   const [current, setCurrent] = useState(0);
+  const randomizedQuestions = useMemo(
+    () => stableShuffle(availableQuestions, basicDetails?.targetRole || "default"),
+    [availableQuestions, basicDetails?.targetRole],
+  );
+  const questions = useMemo(() => {
+    if (
+      aptitudeQuestionVersion !== assessmentQuestionVersion ||
+      !aptitudeQuestionIds.length
+    ) {
+      return randomizedQuestions;
+    }
 
-  const q = QUESTIONS[current];
+    const questionMap = new Map(
+      availableQuestions.map((question) => [question.id, question]),
+    );
+    const savedQuestions = aptitudeQuestionIds
+      .map((id) => questionMap.get(id))
+      .filter(Boolean);
+    return savedQuestions.length === aptitudeQuestionIds.length
+      ? savedQuestions
+      : randomizedQuestions;
+  }, [
+    aptitudeQuestionIds,
+    aptitudeQuestionVersion,
+    availableQuestions,
+    randomizedQuestions,
+  ]);
+
+  useEffect(() => {
+    const savedIds =
+      aptitudeQuestionVersion === assessmentQuestionVersion
+        ? aptitudeQuestionIds
+        : [];
+    if (!savedIds.length || questions.length !== savedIds.length) {
+      setAptitudeQuestionSet(
+        questions.map((question) => question.id),
+        assessmentQuestionVersion,
+      );
+    }
+  }, [
+    aptitudeQuestionIds,
+    aptitudeQuestionVersion,
+    questions,
+    setAptitudeQuestionSet,
+  ]);
+
+  const q = questions[current];
+  if (!q) return null;
+
   const selected = aptitudeAnswers[q.id];
-
-  const selectOption = (idx) => {
-    setAptitudeAnswers({ [q.id]: idx });
-  };
-
-  const isLast = current === QUESTIONS.length - 1;
-
-  const isStepValid = Object.keys(aptitudeAnswers).length === QUESTIONS.length;
+  const selectOption = (idx) => setAptitudeAnswers({ [q.id]: idx });
+  const isLast = current === questions.length - 1;
+  const isStepValid = questions.every(
+    (question) => aptitudeAnswers[question.id] !== undefined,
+  );
 
   return (
     <Card className="border border-border bg-card shadow-lg">
       <CardContent className="p-8 space-y-6">
-        {/* Header */}
         <div>
           <h2 className="text-2xl font-bold">Aptitude Snapshot</h2>
           <p className="text-muted-foreground text-sm">
-            Question {current + 1} of {QUESTIONS.length}
+            {q.category} · {q.difficulty} · Question {current + 1} of{" "}
+            {questions.length}
           </p>
         </div>
 
-        {/* Question */}
         <p className="font-medium">{q.question}</p>
 
-        {/* Options */}
         <div className="space-y-2">
           {q.options.map((opt, idx) => (
             <button
@@ -79,7 +119,6 @@ export default function AptitudeTest({ onNext, onBack }) {
           ))}
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between pt-4">
           <Button
             variant="outline"

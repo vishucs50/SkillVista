@@ -6,6 +6,14 @@ import SkillGapAnalysis from "@/models/SkillGapAnalysis";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+function parseModelJson(text) {
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+  return JSON.parse(cleaned);
+}
+
 export async function POST(req) {
   try {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
@@ -29,12 +37,23 @@ export async function POST(req) {
 
     await connectDB();
 
-    const { targetRole, experienceLevel, userSkills, githubData } =
+    const { targetRole, experienceLevel, userSkills } =
       await req.json();
 
-    if (!targetRole || !experienceLevel) {
+    if (
+      typeof targetRole !== "string" ||
+      !targetRole.trim() ||
+      typeof experienceLevel !== "string" ||
+      !experienceLevel.trim()
+    ) {
       return Response.json(
         { error: "Target role and experience level are required" },
+        { status: 400 },
+      );
+    }
+    if (!Array.isArray(userSkills)) {
+      return Response.json(
+        { error: "User skills must be an array" },
         { status: 400 },
       );
     }
@@ -48,7 +67,6 @@ export async function POST(req) {
           targetRole,
           experienceLevel,
           userSkills,
-          githubData,
         }),
       )
       .digest("hex");
@@ -89,7 +107,6 @@ Given:
 - Target Role: ${targetRole}
 - Experience Level: ${experienceLevel}
 - User Skills: ${JSON.stringify(userSkills || [])}
-- GitHub Data: ${JSON.stringify(githubData || {})}
 
 Analyze and return STRICT JSON in this exact format:
 {
@@ -135,12 +152,6 @@ Analyze and return STRICT JSON in this exact format:
     "title": "<project name>",
     "description": "<what to build>",
     "skillsCovered": ["<skill1>", "<skill2>"]
-  },
-  "githubInsights": {
-    "topLanguages": ["<lang1>", "<lang2>"],
-    "detectedFrameworks": ["<fw1>", "<fw2>"],
-    "contributionLevel": "high" | "medium" | "low",
-    "strengthAreas": ["<area1>", "<area2>"]
   }
 }
 
@@ -151,7 +162,6 @@ Rules:
 - Generate a practical 30-day improvement roadmap broken into 4 weeks.
 - Suggest 1 project idea to close major gaps.
 - Include 3-5 actionable next steps with real resource URLs.
-- If GitHub data is provided, analyze the languages and frameworks detected.
 - Keep response structured and concise.
 - Professional tone.
 - Only return JSON, no markdown, no explanation.`;
@@ -163,7 +173,21 @@ Rules:
       throw new Error("Empty response from Gemini");
     }
 
-    const analysis = JSON.parse(text);
+    let analysis;
+    try {
+      analysis = parseModelJson(text);
+    } catch {
+      throw new Error("The AI returned an invalid analysis response");
+    }
+
+    if (
+      typeof analysis !== "object" ||
+      analysis === null ||
+      typeof analysis.matchPercentage !== "number" ||
+      !Array.isArray(analysis.skillComparison)
+    ) {
+      throw new Error("The AI returned an incomplete analysis response");
+    }
 
     // ✅ SAVE TO MONGODB - per-user caching
     await SkillGapAnalysis.create({

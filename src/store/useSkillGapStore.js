@@ -6,7 +6,10 @@ export const useSkillGapStore = create(
     (set) => ({
       analysis: null,
 
-      setAnalysis: (data) => set({ analysis: data }),
+      setAnalysis: (data) =>
+        set((state) => ({
+          analysis: typeof data === "function" ? data(state.analysis) : data,
+        })),
       clearAnalysis: () => set({ analysis: null }),
     }),
     {

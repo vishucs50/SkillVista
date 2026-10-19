@@ -17,11 +17,13 @@ export const useAssessmentStore = create(
           resumeStatus: "",
           timeline: "",
           weeklyHours: "",
-          targetRole:"",
+          targetRole: "",
           skills: [],
         },
 
         aptitudeAnswers: {},
+        aptitudeQuestionIds: [],
+        aptitudeQuestionVersion: 0,
 
         /* ---------- BASIC DETAILS ---------- */
         setBasicDetails: (data) =>
@@ -58,6 +60,14 @@ export const useAssessmentStore = create(
             aptitudeAnswers: { ...state.aptitudeAnswers, ...data },
           })),
 
+        clearAptitudeAnswers: () => set({ aptitudeAnswers: {} }),
+
+        setAptitudeQuestionSet: (ids, version) =>
+          set({
+            aptitudeQuestionIds: ids,
+            aptitudeQuestionVersion: version,
+          }),
+
         /* ---------- RESET ---------- */
         resetAll: () =>
           set({
@@ -72,15 +82,17 @@ export const useAssessmentStore = create(
               resumeStatus: "",
               timeline: "",
               weeklyHours: "",
-              targetRole:"",
+              targetRole: "",
               skills: [],
             },
             aptitudeAnswers: {},
+            aptitudeQuestionIds: [],
+            aptitudeQuestionVersion: 0,
           }),
       }),
       {
         name: "skillvista-assessment", // localStorage key
-        version: 1,
+        version: 2,
         migrate: (persistedState, version) => {
           // Ensure all required basicDetails fields exist
           if (persistedState && persistedState.basicDetails) {
@@ -99,6 +111,12 @@ export const useAssessmentStore = create(
               skills: [],
               ...persistedState.basicDetails,
             };
+          }
+          if (persistedState) {
+            persistedState.aptitudeQuestionIds =
+              persistedState.aptitudeQuestionIds || [];
+            persistedState.aptitudeQuestionVersion =
+              persistedState.aptitudeQuestionVersion || 0;
           }
           return persistedState;
         },

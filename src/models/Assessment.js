@@ -36,6 +36,14 @@ const AssessmentSchema = new mongoose.Schema(
       type: Object,
       default: {},
     },
+    aptitudeQuestionIds: {
+      type: [String],
+      default: [],
+    },
+    aptitudeQuestionVersion: {
+      type: Number,
+      default: 0,
+    },
     
   },
   { timestamps: true },

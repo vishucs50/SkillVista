@@ -4,29 +4,26 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import RevealOnScroll from "@/components/common/RevealOnScroll";
-import { Button } from "@/components/ui/button";
 import { useSkillGapStore } from "@/store/useSkillGapStore";
 import RoleSelector from "@/components/skill-gap/RoleSelector";
-import RequiredSkills from "@/components/skill-gap/RequiredSkills";
 import SkillComparison from "@/components/skill-gap/SkillComparison";
 import EmptyState from "@/components/skill-gap/EmptyState";
 import { useAssessmentStore } from "@/store/useAssessmentStore";
 import SkillGapHistory from "@/components/skill-gap/SkillGapHistory";
-import GitHubAnalysis from "@/components/skill-gap/GithubAnalysis";
+import { syncAssessmentToBackend } from "@/lib/syncAssessment";
 export default function SkillGapPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const analysis = useSkillGapStore((s) => s.analysis);
   const setAnalysis = useSkillGapStore((s) => s.setAnalysis);
   const clearAnalysis = useSkillGapStore((s) => s.clearAnalysis);
   const [error, setError] = useState(null);
-  const [githubData, setGithubData] = useState(null);
-  const [isRefreshingGithub, setIsRefreshingGithub] = useState(false);
   const previousUserId = useRef(null);
 
   const basicDetails = useAssessmentStore((s) => s.basicDetails);
+  const addSkill = useAssessmentStore((s) => s.addSkill);
+  const [pendingSkill, setPendingSkill] = useState(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -43,79 +40,83 @@ export default function SkillGapPage() {
     if (userId) previousUserId.current = userId;
   }, [session?.user?.id, clearAnalysis]);
 
-const handleAnalyze = async (targetRole, experienceLevel) => {
-  setIsLoading(true);
-  setError(null);
+  const handleAnalyze = async (targetRole, experienceLevel) => {
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    // Fetch GitHub data if available
-    let githubData = null;
     try {
-      const githubRes = await fetch("/api/github/analyze");
-      if (githubRes.ok) {
-        const githubInfo = await githubRes.json();
-        if (githubInfo.githubConnected && githubInfo.githubData) {
-          githubData = {
-            ...githubInfo.githubData,
-            username: githubInfo.githubUsername || githubInfo.githubData.username,
-            topLanguages: githubInfo.githubData.topLanguages || [],
-            detectedFrameworks: githubInfo.githubData.detectedFrameworks || [],
-            repositories: githubInfo.githubData.repositories || 0,
-            followers: githubInfo.githubData.followers || 0,
-            strengthAreas: githubInfo.githubData.strengthAreas || [],
-            contributionLevel: githubInfo.githubData.contributionLevel || "low",
-          };
-          setGithubData(githubData);
-        }
+      const res = await fetch("/api/skill-gap/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetRole,
+          experienceLevel,
+          userSkills: basicDetails?.skills || [],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || `Analysis failed (${res.status})`);
       }
-    } catch (err) {
-      console.warn("Could not fetch GitHub data:", err);
-    }
 
-    const res = await fetch("/api/skill-gap/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetRole,
-        experienceLevel,
-        userSkills: basicDetails?.skills || [],
-        githubData: githubData || {
-          skills: basicDetails?.skills || [],
-          targetRole: basicDetails?.targetRole || "",
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Analysis failed");
-    }
-
-    const data = await res.json();
-    setAnalysis({ ...data, githubData });
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  const refreshGithub = async () => {
-    setIsRefreshingGithub(true);
-    try {
-      const response = await fetch("/api/github/analyze", { method: "POST" });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not refresh GitHub analysis");
-      if (result.githubConnected && result.githubData) {
-        const refreshed = { ...result.githubData, username: result.githubUsername || result.githubData.username };
-        setGithubData(refreshed);
-        if (analysis) setAnalysis({ ...analysis, githubData: refreshed });
+      if (
+        typeof data.matchPercentage !== "number" ||
+        !Array.isArray(data.skillComparison)
+      ) {
+        throw new Error("The analysis response was incomplete. Please try again.");
       }
+
+      setAnalysis(data);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
-      setIsRefreshingGithub(false);
+      setIsLoading(false);
     }
+  };
+
+  const handleAddSkill = (skill) => {
+    if (
+      !skill ||
+      basicDetails?.skills?.some(
+        (existingSkill) =>
+          existingSkill.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
+      return;
+    }
+
+    addSkill(skill);
+    setPendingSkill(skill);
+
+    // Do not await this request: local state is updated immediately and
+    // keepalive allows the browser to finish syncing during navigation.
+    syncAssessmentToBackend()
+      .catch((syncError) => {
+        console.error("Background skill sync failed:", syncError);
+        setError(`"${skill}" was added locally but could not be saved.`);
+      })
+      .finally(() => setPendingSkill(null));
+
+    setAnalysis((currentAnalysis) => {
+      if (!currentAnalysis) return currentAnalysis;
+
+      const updatedComparison = currentAnalysis.skillComparison.map((item) =>
+        item.skill.toLowerCase() === skill.toLowerCase()
+          ? { ...item, userHas: true, gapStatus: "No Gap" }
+          : item,
+      );
+      const requiredSkills = updatedComparison.filter((item) => item.required);
+      const matchedSkills = requiredSkills.filter((item) => item.userHas);
+
+      return {
+        ...currentAnalysis,
+        matchPercentage: requiredSkills.length
+          ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
+          : currentAnalysis.matchPercentage,
+        skillComparison: updatedComparison,
+      };
+    });
   };
 
   if (status === "loading") {
@@ -189,24 +190,12 @@ const handleAnalyze = async (targetRole, experienceLevel) => {
       {/* Results */}
       {analysis && !isLoading && (
         <div className="space-y-8 mb-5">
-          {(githubData || analysis.githubData) && (
-            <RevealOnScroll>
-              <GitHubAnalysis
-                data={githubData || analysis.githubData}
-                comparison={analysis.skillComparison}
-                onRefresh={refreshGithub}
-                isRefreshing={isRefreshingGithub}
-              />
-            </RevealOnScroll>
-          )}
-          {/* <RevealOnScroll>
-            <RequiredSkills data={analysis.requiredSkills} />
-          </RevealOnScroll> */}
-
           <RevealOnScroll delay={0.1}>
             <SkillComparison
               matchPercentage={analysis.matchPercentage}
               comparison={analysis.skillComparison}
+              onAddSkill={handleAddSkill}
+              pendingSkill={pendingSkill}
             />
           </RevealOnScroll>
 

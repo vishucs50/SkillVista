@@ -142,6 +142,25 @@ export default function ProfileEditForm({ isOpen, onClose }) {
       };
 
       const roleChanged = basicDetails?.targetRole !== updatedData?.targetRole;
+      const assessmentFields = [
+        "name",
+        "college",
+        "degree",
+        "year",
+        "goalType",
+        "targetRole",
+        "interviewExperience",
+        "projectExperience",
+        "resumeStatus",
+        "timeline",
+        "weeklyHours",
+        "skills",
+      ];
+      const assessmentChanged = assessmentFields.some(
+        (field) =>
+          JSON.stringify(basicDetails?.[field] ?? null) !==
+          JSON.stringify(updatedData?.[field] ?? null),
+      );
 
       setBasicDetails(updatedData);
       setProfileFile(null);
@@ -164,14 +183,16 @@ export default function ProfileEditForm({ isOpen, onClose }) {
 
       await syncAssessmentToBackend();
 
-      const resultsRes = await fetch("/api/results/generate", {
-        method: "POST",
-        credentials: "include",
-      });
+      if (assessmentChanged) {
+        const resultsRes = await fetch("/api/results/generate", {
+          method: "POST",
+          credentials: "include",
+        });
 
-      if (resultsRes.ok) {
-        const resultsData = await resultsRes.json();
-        setResults(resultsData);
+        if (resultsRes.ok) {
+          const resultsData = await resultsRes.json();
+          setResults(resultsData);
+        }
       }
 
       

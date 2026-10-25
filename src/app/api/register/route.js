@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import { sendWelcomeEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
@@ -19,13 +20,21 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
     });
 
-    return Response.json({ success: true }, { status: 201 });
+    let welcomeEmailSent = false;
+    try {
+      await sendWelcomeEmail({ name: user.name, email: user.email });
+      welcomeEmailSent = true;
+    } catch (emailError) {
+      console.error("WELCOME EMAIL ERROR:", emailError);
+    }
+
+    return Response.json({ success: true, welcomeEmailSent }, { status: 201 });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
     return Response.json({ message: "Server error" }, { status: 500 });

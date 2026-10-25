@@ -68,6 +68,13 @@ Create a `.env.local` file in the project root with these variables:
 
 **AI & Analytics:**
 - `GEMINI_API_KEY` — From [Google AI Studio](https://makersuite.google.com/app/apikey)
+- `SES_REGION` — AWS region used by Amazon SES, for example `ap-south-1`
+- `SES_FROM_EMAIL` — Verified Amazon SES sender email address
+
+Amazon SES currently sends a welcome email after a successful registration. The
+sender address must be verified in SES, and the SES IAM credentials must have
+`ses:SendEmail` permission. In SES sandbox mode, the recipient address must
+also be verified.
 
 ### 4. Run Development Server
 ```bash

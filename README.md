@@ -64,6 +64,10 @@ Create a `.env.local` file in the project root with these variables:
 - `CLOUDINARY_CLOUD_NAME` — Your Cloudinary cloud name
 - `CLOUDINARY_API_KEY` — Your Cloudinary API key
 - `CLOUDINARY_API_SECRET` — Your Cloudinary API secret
+- `S3_REGION` — AWS region for private resume storage (for example, `ap-south-1`)
+- `S3_BUCKET_NAME` — Private S3 bucket name for resume files
+- `S3_ACCESS_KEY_ID` — IAM access key with limited access to the resume bucket
+- `S3_SECRET_ACCESS_KEY` — IAM secret access key
 
 **AI & Analytics:**
 - `GEMINI_API_KEY` — From [Google AI Studio](https://makersuite.google.com/app/apikey)
@@ -163,4 +167,3 @@ All API routes are located under `/src/app/api`:
 ## Deployment
 
 SkillVista is ready for deployment on Vercel or any Node.js/Next.js hosting platform. Ensure all environment variables are properly configured in your deployment environment.
-

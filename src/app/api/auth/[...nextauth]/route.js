@@ -91,12 +91,19 @@ export const authOptions = {
               authProvider: "google",
             });
 
-            sendWelcomeEmail({
-              name: user.name || "there",
-              email: user.email,
-            }).catch((err) =>
-              console.error("[nextauth/signIn] Google welcome email error:", err)
-            );
+            try {
+              await sendWelcomeEmail({
+                name: user.name || "there",
+                email: user.email,
+              });
+            } catch (emailError) {
+              console.error("[nextauth/signIn] Google welcome email error:", {
+                message:
+                  emailError instanceof Error
+                    ? emailError.message
+                    : String(emailError),
+              });
+            }
           } else if (!existingUser.authProvider) {
             existingUser.authProvider = "google";
             await existingUser.save();
@@ -132,12 +139,19 @@ export const authOptions = {
               authProvider: "github",
             });
 
-            sendWelcomeEmail({
-              name: user.name || githubUsername || "there",
-              email: githubEmail,
-            }).catch((err) =>
-              console.error("[nextauth/signIn] GitHub welcome email error:", err)
-            );
+            try {
+              await sendWelcomeEmail({
+                name: user.name || githubUsername || "there",
+                email: githubEmail,
+              });
+            } catch (emailError) {
+              console.error("[nextauth/signIn] GitHub welcome email error:", {
+                message:
+                  emailError instanceof Error
+                    ? emailError.message
+                    : String(emailError),
+              });
+            }
           } else {
             githubUser = await User.findByIdAndUpdate(
               existingUser._id,

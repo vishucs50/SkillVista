@@ -22,6 +22,7 @@ const AssessmentResultSchema = new mongoose.Schema(
       consistency: Number,
     },
 
+    emailSentAt: Date,
     generatedAt: Date,
   },
   { timestamps: true },

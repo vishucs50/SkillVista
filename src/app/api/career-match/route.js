@@ -3,10 +3,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { connectDB } from "@/lib/db";
 import Resume from "@/models/Resume";
 import { getS3Object } from "@/lib/s3";
-import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
+import { extractResumeText } from "@/lib/extractResumeText";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
@@ -26,15 +26,10 @@ export async function POST(req) {
       const object = await getS3Object(resume.key);
       if (!object.Body) return Response.json({ error: "Resume file is unavailable" }, { status: 404 });
       const buffer = Buffer.from(await object.Body.transformToByteArray());
-      if (resume.contentType === "text/plain") {
-        resolvedResumeText = buffer.toString("utf8");
-      } else if (resume.contentType === "application/pdf") {
-        const parser = new PDFParse({ data: buffer });
-        resolvedResumeText = (await parser.getText()).text;
-        await parser.destroy();
-      } else {
-        resolvedResumeText = (await mammoth.extractRawText({ buffer })).value;
-      }
+      resolvedResumeText = await extractResumeText({
+        buffer,
+        contentType: resume.contentType,
+      });
     }
 
     if (!resolvedResumeText.trim() || !jobDescription?.trim()) {
@@ -63,7 +58,13 @@ ${jobDescription}`;
     const result = await model.generateContent(prompt);
     return Response.json(JSON.parse(result.response.text()));
   } catch (error) {
-    console.error("[api/career-match] Error:", error);
-    return Response.json({ error: "Failed to analyze career match" }, { status: 500 });
+    console.error("[api/career-match] Error:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return Response.json(
+      { error: "Failed to analyze career match. Please try again." },
+      { status: 500 },
+    );
   }
 }

@@ -1,19 +1,18 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
 const getSesClient = () => {
-  const region = process.env.SES_REGION || process.env.S3_REGION;
+  const region = process.env.SES_REGION || process.env.S3_REGION || "ap-south-1";
   const accessKeyId =
     process.env.SES_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey =
     process.env.SES_SECRET_ACCESS_KEY || process.env.S3_SECRET_ACCESS_KEY;
 
-  if (!region || !accessKeyId || !secretAccessKey) {
-    throw new Error("SES configuration is incomplete");
-  }
-
   return new SESv2Client({
     region,
-    credentials: { accessKeyId, secretAccessKey },
+    credentials:
+      accessKeyId && secretAccessKey
+        ? { accessKeyId, secretAccessKey }
+        : undefined,
   });
 };
 
@@ -33,7 +32,7 @@ export async function sendWelcomeEmail({ name, email }) {
     throw new Error("SES_FROM_EMAIL or NEXTAUTH_URL is not configured");
   }
 
-  const safeName = escapeHtml(name);
+  const safeName = escapeHtml(name || "there");
   const command = new SendEmailCommand({
     FromEmailAddress: fromEmail,
     Destination: { ToAddresses: [email] },
@@ -54,7 +53,7 @@ export async function sendWelcomeEmail({ name, email }) {
             Charset: "UTF-8",
           },
           Text: {
-            Data: `Welcome to SkillVista, ${name}!\n\nOpen your dashboard: ${appUrl}/dashboard`,
+            Data: `Welcome to SkillVista, ${name || "there"}!\n\nOpen your dashboard: ${appUrl}/dashboard`,
             Charset: "UTF-8",
           },
         },

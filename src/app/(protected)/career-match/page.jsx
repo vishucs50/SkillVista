@@ -14,6 +14,7 @@ export default function CareerMatchPage() {
   const [resumes, setResumes] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [storageError, setStorageError] = useState("");
+  const [selectedResumeId, setSelectedResumeId] = useState("");
 
   const loadResumes = async () => {
     const response = await fetch("/api/resumes");
@@ -79,7 +80,11 @@ export default function CareerMatchPage() {
       const response = await fetch("/api/career-match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText, jobDescription }),
+        body: JSON.stringify({
+          resumeText: selectedResumeId ? "" : resumeText,
+          resumeId: selectedResumeId || undefined,
+          jobDescription,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Analysis failed");
@@ -107,14 +112,14 @@ export default function CareerMatchPage() {
           <span className="text-xs text-muted-foreground">PDF, DOCX, or TXT up to 5 MB. Files are private.</span>
         </div>
         {storageError && <p className="mt-3 text-sm text-destructive">{storageError}</p>}
-        {resumes.length > 0 && <div className="mt-4 space-y-2">{resumes.map((resume) => <div key={resume._id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><span>{resume.name}</span><Button variant="ghost" size="icon" onClick={() => deleteResume(resume._id)} aria-label={`Delete ${resume.name}`}><Trash2 size={16} /></Button></div>)}</div>}
+        {resumes.length > 0 && <div className="mt-4 space-y-2">{resumes.map((resume) => <div key={resume._id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><label className="flex items-center gap-2"><input type="radio" name="selectedResume" checked={selectedResumeId === resume._id} onChange={() => { setSelectedResumeId(resume._id); setResumeText(""); }} />{resume.name}</label><Button variant="ghost" size="icon" onClick={() => deleteResume(resume._id)} aria-label={`Delete ${resume.name}`}><Trash2 size={16} /></Button></div>)}</div>}
       </CardContent></Card>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card><CardHeader><CardTitle>Your resume</CardTitle></CardHeader><CardContent><textarea value={resumeText} onChange={(e) => setResumeText(e.target.value)} className="min-h-72 w-full rounded-lg border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Paste your resume text here..." /></CardContent></Card>
+        <Card><CardHeader><CardTitle>Your resume</CardTitle></CardHeader><CardContent><textarea value={resumeText} onChange={(e) => { setResumeText(e.target.value); setSelectedResumeId(""); }} disabled={Boolean(selectedResumeId)} className="min-h-72 w-full rounded-lg border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary disabled:opacity-50" placeholder={selectedResumeId ? "Using selected saved resume" : "Paste your resume text here..."} /></CardContent></Card>
         <Card><CardHeader><CardTitle>Job description</CardTitle></CardHeader><CardContent><textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} className="min-h-72 w-full rounded-lg border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Paste the job description here..." /></CardContent></Card>
       </div>
       {error && <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
-      <Button onClick={analyze} disabled={loading || !resumeText.trim() || !jobDescription.trim()} className="mt-6">{loading ? <><Loader2 className="mr-2 animate-spin" size={16} />Analyzing...</> : "Analyze match"}</Button>
+      <Button onClick={analyze} disabled={loading || (!resumeText.trim() && !selectedResumeId) || !jobDescription.trim()} className="mt-6">{loading ? <><Loader2 className="mr-2 animate-spin" size={16} />Analyzing...</> : "Analyze match"}</Button>
       {result && <Card className="mt-8"><CardHeader><CardTitle>{result.matchPercentage}% match</CardTitle></CardHeader><CardContent className="grid gap-6 md:grid-cols-2"><Insight title="Strengths" items={result.strengths} /><Insight title="Missing skills" items={result.missingSkills} /><Insight title="Keywords to add" items={result.keywordsToAdd} /><Insight title="Recommendations" items={result.recommendations} /></CardContent></Card>}
     </div>
   );

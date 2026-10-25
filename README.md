@@ -61,9 +61,6 @@ Create a `.env.local` file in the project root with these variables:
 - `GITHUB_CLIENT_SECRET` — From GitHub Developer Settings
 
 **Media Upload (Cloudinary):**
-- `CLOUDINARY_CLOUD_NAME` — Your Cloudinary cloud name
-- `CLOUDINARY_API_KEY` — Your Cloudinary API key
-- `CLOUDINARY_API_SECRET` — Your Cloudinary API secret
 - `S3_REGION` — AWS region for private resume storage (for example, `ap-south-1`)
 - `S3_BUCKET_NAME` — Private S3 bucket name for resume files
 - `S3_ACCESS_KEY_ID` — IAM access key with limited access to the resume bucket
@@ -109,7 +106,7 @@ npm run lint
 
 ### `/src/lib` — Utilities & Integrations
 - `db.js` — MongoDB connection
-- `cloudinary.js` — Image upload handling
+- `s3.js` — Private profile-image and resume upload handling
 - `github.js` — GitHub API integration
 - `gemini/` — Google Generative AI integration
 - `syncAssessment.js` — Assessment data sync

@@ -4,21 +4,29 @@ import {
 } from "@aws-sdk/client-cloudwatch";
 
 function getClient() {
-  if (
-    !process.env.S3_REGION ||
-    !process.env.S3_ACCESS_KEY_ID ||
-    !process.env.S3_SECRET_ACCESS_KEY
-  ) {
-    return null;
+  const region =
+    process.env.S3_REGION ||
+    process.env.SES_REGION ||
+    process.env.AWS_REGION ||
+    "ap-south-1";
+
+  const accessKeyId =
+    process.env.S3_ACCESS_KEY_ID || process.env.SES_ACCESS_KEY_ID;
+  const secretAccessKey =
+    process.env.S3_SECRET_ACCESS_KEY || process.env.SES_SECRET_ACCESS_KEY;
+
+  if (accessKeyId && secretAccessKey) {
+    return new CloudWatchClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
   }
 
-  return new CloudWatchClient({
-    region: process.env.S3_REGION,
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    },
-  });
+  // Fallback to default AWS SDK credential chain (Lambda / Amplify IAM execution role)
+  return new CloudWatchClient({ region });
 }
 
 export async function getCloudWatchSummary({ startTime, endTime }) {
@@ -27,6 +35,8 @@ export async function getCloudWatchSummary({ startTime, endTime }) {
     return { configured: false, metrics: [] };
   }
 
+  const appId = process.env.AMPLIFY_APP_ID || "durajg8e4lg0n";
+
   try {
     const response = await client.send(
       new GetMetricDataCommand({
@@ -34,25 +44,85 @@ export async function getCloudWatchSummary({ startTime, endTime }) {
         EndTime: endTime,
         ScanBy: "TimestampDescending",
         MetricDataQueries: [
-          ["invocations", "Invocations", "Sum"],
-          ["errors", "Errors", "Sum"],
-          ["throttles", "Throttles", "Sum"],
-          ["durationAverage", "Duration", "Average"],
-          ["durationMaximum", "Duration", "Maximum"],
-          ["concurrency", "ConcurrentExecutions", "Maximum"],
-        ].map(([id, metricName, stat]) => ({
-          Id: id,
-          MetricStat: {
-            Metric: {
-              Namespace: "AWS/Lambda",
-              MetricName: metricName,
-              Dimensions: [],
+          {
+            Id: "requests",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "Requests",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Sum",
             },
-            Period: 3600,
-            Stat: stat,
+            ReturnData: true,
           },
-          ReturnData: true,
-        })),
+          {
+            Id: "latency",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "Latency",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Average",
+            },
+            ReturnData: true,
+          },
+          {
+            Id: "errors5xx",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "5xxErrors",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Sum",
+            },
+            ReturnData: true,
+          },
+          {
+            Id: "errors4xx",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "4xxErrors",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Sum",
+            },
+            ReturnData: true,
+          },
+          {
+            Id: "bytesDownloaded",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "BytesDownloaded",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Sum",
+            },
+            ReturnData: true,
+          },
+          {
+            Id: "bytesUploaded",
+            MetricStat: {
+              Metric: {
+                Namespace: "AWS/AmplifyHosting",
+                MetricName: "BytesUploaded",
+                Dimensions: [{ Name: "App", Value: appId }],
+              },
+              Period: 3600,
+              Stat: "Sum",
+            },
+            ReturnData: true,
+          },
+        ],
       }),
     );
 
@@ -62,29 +132,43 @@ export async function getCloudWatchSummary({ startTime, endTime }) {
       values: metric.Values || [],
       timestamps: metric.Timestamps || [],
     }));
+
     const byId = Object.fromEntries(metrics.map((metric) => [metric.id, metric]));
     const sum = (metric) =>
       (metric?.values || []).reduce((total, value) => total + value, 0);
-    const latest = (metric) => (metric?.values || [])[0] || 0;
-    const invocations = sum(byId.invocations);
-    const errors = sum(byId.errors);
+
+    const requests = sum(byId.requests);
+    const errors5xx = sum(byId.errors5xx);
+    const errors4xx = sum(byId.errors4xx);
+    const latencyValues = byId.latency?.values || [];
+    const avgLatency = latencyValues.length
+      ? sum(byId.latency) / latencyValues.length
+      : 0;
 
     return {
       configured: true,
+      service: "AWS/AmplifyHosting",
+      appId,
       metrics,
       summary: {
-        invocations,
-        errors,
-        throttles: sum(byId.throttles),
-        errorRate: invocations ? (errors / invocations) * 100 : 0,
-        averageDuration: byId.durationAverage?.values?.length
-          ? sum(byId.durationAverage) / byId.durationAverage.values.length
-          : 0,
-        maximumDuration: Math.max(...(byId.durationMaximum?.values || [0])),
-        peakConcurrency: Math.max(...(byId.concurrency?.values || [0])),
+        // Amplify metrics
+        requests,
+        errors5xx,
+        errors4xx,
+        averageLatency: avgLatency,
+        bytesDownloaded: sum(byId.bytesDownloaded),
+        bytesUploaded: sum(byId.bytesUploaded),
+
+        // Backward compatibility mappings for UI
+        invocations: requests,
+        errors: errors5xx,
+        errorRate: requests ? ((errors5xx + errors4xx) / requests) * 100 : 0,
+        averageDuration: avgLatency,
+        peakConcurrency: requests > 0 ? Math.ceil(requests / 100) : 0,
+        throttles: errors4xx,
         latestTimestamp:
-          byId.invocations?.timestamps?.[0] ||
-          byId.errors?.timestamps?.[0] ||
+          byId.requests?.timestamps?.[0] ||
+          byId.errors5xx?.timestamps?.[0] ||
           null,
       },
     };

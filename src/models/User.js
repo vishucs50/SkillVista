@@ -56,7 +56,6 @@ const UserSchema = new mongoose.Schema({
     enum: ["credentials", "google", "github"],
     default: "credentials",
   },
-});
+}, { timestamps: true });
 
-// ✅ THIS LINE FIXES THE ERROR
 export default mongoose.models.User || mongoose.model("User", UserSchema);

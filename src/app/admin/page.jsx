@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
-  ArrowUpRight,
   BarChart3,
   Briefcase,
   CheckCircle2,
@@ -42,7 +41,7 @@ import { useRouter } from "next/navigation";
 
 const statCards = [
   { key: "totalUsers", label: "Total Registered Users", icon: Users, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-  { key: "recentUsers", label: "New in Period", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  { key: "recentUsers", label: "Registered in Range", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   { key: "assessments", label: "Assessments Completed", icon: CheckCircle2, color: "text-amber-500", bg: "bg-amber-500/10" },
   { key: "githubUsers", label: "GitHub Connected", icon: Github, color: "text-violet-500", bg: "bg-violet-500/10" },
   { key: "skillGaps", label: "Skill Gap Analyses", icon: BarChart3, color: "text-rose-500", bg: "bg-rose-500/10" },
@@ -55,7 +54,7 @@ function formatNumber(value, maximumFractionDigits = 0) {
 
 function formatDuration(value) {
   if (!value) return "0 ms";
-  return `${formatNumber(value, 0)} ms`;
+  return `${formatNumber(value, 1)} ms`;
 }
 
 function formatDate(isoString) {
@@ -73,7 +72,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "users" | "architecture"
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState("all");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -150,6 +149,19 @@ export default function AdminPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, providerFilter, assessmentFilter]);
+
+  // Registration chart data (ensure single-point data still renders nicely)
+  const chartData = useMemo(() => {
+    const daily = data?.dailyUsers || [];
+    if (daily.length === 1) {
+      // Pad single point with a 0 point so area chart draws correctly
+      return [
+        { date: daily[0].date, count: daily[0].count },
+        { date: daily[0].date + " ", count: daily[0].count },
+      ];
+    }
+    return daily;
+  }, [data?.dailyUsers]);
 
   // CSV Export handler
   const handleExportCSV = () => {
@@ -231,12 +243,14 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
+              onChange={(e) => setDays(e.target.value)}
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-sm transition hover:border-primary/50 focus:outline-none"
             >
-              <option value={7}>Last 7 days</option>
-              <option value={30}>Last 30 days</option>
-              <option value={90}>Last 90 days</option>
+              <option value="all">All time</option>
+              <option value="180">Last 6 months</option>
+              <option value="90">Last 90 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="7">Last 7 days</option>
             </select>
             <button
               onClick={load}
@@ -484,27 +498,51 @@ export default function AdminPage() {
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold">User Registrations</h2>
-                    <p className="text-sm text-muted-foreground">Daily candidate onboarding velocity</p>
+                    <p className="text-sm text-muted-foreground">Candidate onboarding velocity over time</p>
                   </div>
                   <BarChart3 className="size-5 text-muted-foreground" />
                 </div>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data?.dailyUsers || []}>
-                      <defs>
-                        <linearGradient id="usersGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(val) => val.slice(5)} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="count" stroke="#06b6d4" fill="url(#usersGradient)" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+
+                {chartData.length === 0 ? (
+                  <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 p-6 text-center">
+                    <Users className="size-8 text-muted-foreground/50" />
+                    <p className="font-semibold text-foreground">No registrations in this time period</p>
+                    <p className="text-xs text-muted-foreground">Switch to &apos;All time&apos; to view existing registrations</p>
+                    {days !== "all" && (
+                      <button
+                        onClick={() => setDays("all")}
+                        className="mt-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/20"
+                      >
+                        View All Time Registrations
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="usersGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(val) => val.trim().slice(5)} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#06b6d4"
+                          fill="url(#usersGradient)"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: "#06b6d4" }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -533,7 +571,7 @@ export default function AdminPage() {
               </div>
             </section>
 
-            {/* CloudWatch Lambda Telemetry */}
+            {/* CloudWatch Telemetry */}
             <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
                 <div className="rounded-xl bg-emerald-500/10 p-2.5">
@@ -541,7 +579,9 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <h2 className="font-bold">AWS CloudWatch Serverless Telemetry</h2>
-                  <p className="text-sm text-muted-foreground">Live Next.js Lambda invocation statistics</p>
+                  <p className="text-sm text-muted-foreground">
+                    Live compute traffic, latency, and error tracking from CloudWatch (Namespace: AWS/AmplifyHosting)
+                  </p>
                 </div>
               </div>
 
@@ -556,33 +596,33 @@ export default function AdminPage() {
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl bg-muted/40 p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Invocations</p>
-                    <p className="mt-2 text-2xl font-bold">{formatNumber(data.cloudWatch.summary?.invocations)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Total compute triggers</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Total Requests</p>
+                    <p className="mt-2 text-2xl font-bold">
+                      {formatNumber(data.cloudWatch.summary?.requests || data.cloudWatch.summary?.invocations)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Amplify Hosting HTTP requests</p>
                   </div>
                   <div className="rounded-xl bg-muted/40 p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Lambda Errors</p>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">CDN Bandwidth</p>
+                    <p className="mt-2 text-2xl font-bold">
+                      {formatNumber((data.cloudWatch.summary?.bytesDownloaded || 0) / (1024 * 1024), 1)} MB
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Data served to candidates</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Average Latency</p>
+                    <p className="mt-2 text-2xl font-bold">
+                      {formatDuration(data.cloudWatch.summary?.averageLatency || data.cloudWatch.summary?.averageDuration)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Amplify response speed</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-4">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Error Rate</p>
                     <p className="mt-2 text-2xl font-bold text-rose-500">
-                      {formatNumber(data.cloudWatch.summary?.errors)}
+                      {formatNumber(data.cloudWatch.summary?.errorRate, 2)}%
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatNumber(data.cloudWatch.summary?.errorRate, 2)}% failure rate
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Average Duration</p>
-                    <p className="mt-2 text-2xl font-bold">
-                      {formatDuration(data.cloudWatch.summary?.averageDuration)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">SSR response latency</p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Peak Concurrency</p>
-                    <p className="mt-2 text-2xl font-bold">
-                      {formatNumber(data.cloudWatch.summary?.peakConcurrency)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatNumber(data.cloudWatch.summary?.throttles)} throttles
+                      {formatNumber(data.cloudWatch.summary?.errors5xx)} (5xx) • {formatNumber(data.cloudWatch.summary?.errors4xx)} (4xx)
                     </p>
                   </div>
                 </div>

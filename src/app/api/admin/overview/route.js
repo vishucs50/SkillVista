@@ -37,8 +37,25 @@ export async function GET(req) {
     }
 
     const url = new URL(req.url);
-    const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 7), 90);
+    const daysParam = url.searchParams.get("days");
+    const isAllTime = daysParam === "all" || daysParam === "0" || Number(daysParam) >= 365;
+    const days = isAllTime ? 365 : Math.min(Math.max(Number(daysParam) || 30, 7), 180);
     const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Calculate timestamp-based ObjectId boundary for fallback matching
+    const startObjectId = new mongoose.Types.ObjectId(
+      Math.floor(start.getTime() / 1000).toString(16) + "0000000000000000"
+    );
+
+    const userDateMatchStage = isAllTime
+      ? []
+      : [
+          {
+            $match: {
+              effectiveDate: { $gte: start },
+            },
+          },
+        ];
 
     const [
       totalUsers,
@@ -48,25 +65,39 @@ export async function GET(req) {
       skillGapsCount,
       attemptsCount,
       providers,
-      dailyUsers,
+      dailyUsersRaw,
       topRolesAgg,
       topSkillGapsAgg,
       avgStatsAgg,
       rawUsers,
     ] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ createdAt: { $gte: start } }),
+      isAllTime
+        ? User.countDocuments()
+        : User.countDocuments({
+            $or: [
+              { createdAt: { $gte: start } },
+              { _id: { $gte: startObjectId } },
+            ],
+          }),
       User.countDocuments({ githubConnected: true }),
       Assessment.countDocuments({ "basicDetails.targetRole": { $exists: true } }),
       SkillGapAnalysis.countDocuments(),
       MentalAbilityAttempt.countDocuments(),
       User.aggregate([{ $group: { _id: "$authProvider", count: { $sum: 1 } } }]),
       User.aggregate([
-        { $match: { createdAt: { $gte: start } } },
+        {
+          $addFields: {
+            effectiveDate: {
+              $ifNull: ["$createdAt", { $toDate: "$_id" }],
+            },
+          },
+        },
+        ...userDateMatchStage,
         {
           $group: {
             _id: {
-              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+              $dateToString: { format: "%Y-%m-%d", date: "$effectiveDate" },
             },
             count: { $sum: 1 },
           },
@@ -100,7 +131,7 @@ export async function GET(req) {
         {},
         { name: 1, email: 1, authProvider: 1, githubConnected: 1, createdAt: 1 }
       )
-        .sort({ createdAt: -1 })
+        .sort({ _id: -1 })
         .limit(100)
         .lean(),
     ]);
@@ -124,6 +155,17 @@ export async function GET(req) {
     const users = rawUsers.map((u) => {
       const a = assessmentMap.get(String(u._id));
       const r = resultMap.get(String(u._id));
+
+      // Resilient fallback for joined date extracted from ObjectId timestamp
+      let effectiveDate = u.createdAt;
+      if (!effectiveDate && u._id) {
+        try {
+          effectiveDate = new Date(parseInt(String(u._id).substring(0, 8), 16) * 1000);
+        } catch {
+          effectiveDate = null;
+        }
+      }
+
       return {
         id: String(u._id),
         name: u.name || "Anonymous",
@@ -138,12 +180,12 @@ export async function GET(req) {
         employabilityIndex: r?.employabilityIndex != null ? Math.round(r.employabilityIndex) : null,
         aptitudeScore: r?.aptitudeScore != null ? Math.round(r.aptitudeScore) : null,
         criticalSkillGaps: r?.criticalSkillGaps || [],
-        joinedAt: u.createdAt ? u.createdAt.toISOString() : null,
+        joinedAt: effectiveDate ? effectiveDate.toISOString() : null,
       };
     });
 
     const cloudWatch = await getCloudWatchSummary({
-      startTime: start,
+      startTime: isAllTime ? new Date(Date.now() - 30 * 86400000) : start,
       endTime: new Date(),
     });
 
@@ -207,7 +249,7 @@ export async function GET(req) {
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       adminCount: getAdminEmails().length,
-      rangeDays: days,
+      rangeDays: isAllTime ? "all" : days,
       metrics: {
         totalUsers,
         recentUsers: recentUsersCount,
@@ -229,7 +271,7 @@ export async function GET(req) {
         name: item._id || "unknown",
         count: item.count,
       })),
-      dailyUsers: dailyUsers.map((item) => ({
+      dailyUsers: dailyUsersRaw.map((item) => ({
         date: item._id,
         count: item.count,
       })),

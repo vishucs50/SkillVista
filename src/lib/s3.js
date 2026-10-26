@@ -53,6 +53,18 @@ export function getS3Object(key) {
   return s3.send(createDownloadCommand(key));
 }
 
+export function putS3Object({ key, buffer, contentType }) {
+  const { bucket, s3 } = getConfig();
+  return s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    }),
+  );
+}
+
 export function deleteS3Object(key) {
   const { bucket, s3 } = getConfig();
   return s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

@@ -214,3 +214,152 @@ ${appUrl}/dashboard
 
   await getSesClient().send(command);
 }
+
+export async function sendCareerMatchEmail({ name, email, result }) {
+  const fromEmail = process.env.SES_FROM_EMAIL;
+  const appUrl = process.env.NEXTAUTH_URL;
+
+  if (!fromEmail || !appUrl) {
+    throw new Error("SES_FROM_EMAIL or NEXTAUTH_URL is not configured");
+  }
+
+  const safeName = escapeHtml(name || "there");
+  const matchPercentage = Math.round(result?.matchPercentage ?? 0);
+  const strengths = Array.isArray(result?.strengths)
+    ? result.strengths.slice(0, 5)
+    : [];
+  const missingSkills = Array.isArray(result?.missingSkills)
+    ? result.missingSkills.slice(0, 5)
+    : [];
+  const recommendations = Array.isArray(result?.recommendations)
+    ? result.recommendations.slice(0, 4)
+    : [];
+
+  const strengthsHtml = strengths.length
+    ? strengths
+        .map(
+          (s) =>
+            `<li style="margin-bottom:6px;color:#16a34a">${escapeHtml(s)}</li>`,
+        )
+        .join("")
+    : "<li style=\"color:#64748b\">No specific matching strengths highlighted.</li>";
+
+  const missingSkillsHtml = missingSkills.length
+    ? missingSkills
+        .map(
+          (m) =>
+            `<li style="margin-bottom:6px;color:#dc2626">${escapeHtml(m)}</li>`,
+        )
+        .join("")
+    : "<li style=\"color:#64748b\">No critical missing skills detected.</li>";
+
+  const recommendationsHtml = recommendations.length
+    ? recommendations
+        .map(
+          (r) =>
+            `<li style="margin-bottom:6px;color:#0f172a">${escapeHtml(r)}</li>`,
+        )
+        .join("")
+    : "<li style=\"color:#64748b\">Review the full report on SkillVista.</li>";
+
+  const strengthsText = strengths.length
+    ? strengths.map((s) => `  + ${s}`).join("\n")
+    : "  None highlighted";
+
+  const missingSkillsText = missingSkills.length
+    ? missingSkills.map((m) => `  - ${m}`).join("\n")
+    : "  None detected";
+
+  const recommendationsText = recommendations.length
+    ? recommendations.map((r, i) => `  ${i + 1}. ${r}`).join("\n")
+    : "  Review your full report on SkillVista";
+
+  const htmlContent = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1e293b;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px">
+      <div style="text-align:center;margin-bottom:24px">
+        <h1 style="color:#2563eb;font-size:24px;margin:0">SkillVista</h1>
+        <p style="color:#64748b;font-size:14px;margin-top:4px">Career Match Analysis</p>
+      </div>
+
+      <h2 style="color:#0f172a;font-size:20px;margin-top:0">Your Career Match results are ready, ${safeName}!</h2>
+      <p style="color:#475569">Here is a quick summary of how your resume compares against the target role requirements:</p>
+
+      <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;text-align:center">
+        <p style="margin:0;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:600">Match Score</p>
+        <div style="font-size:48px;font-weight:700;color:#2563eb;margin:8px 0">${matchPercentage}%</div>
+        <p style="margin:0;font-size:14px;color:#475569">Target Role Alignment</p>
+      </div>
+
+      <div style="margin:20px 0;background-color:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;border-radius:4px">
+        <h3 style="color:#15803d;font-size:15px;margin:0 0 8px 0">Key Matching Strengths</h3>
+        <ul style="margin:0;padding-left:20px;font-size:14px">
+          ${strengthsHtml}
+        </ul>
+      </div>
+
+      <div style="margin:20px 0;background-color:#fef2f2;border-left:4px solid #ef4444;padding:12px 16px;border-radius:4px">
+        <h3 style="color:#991b1b;font-size:15px;margin:0 0 8px 0">Skills to Bridge</h3>
+        <ul style="margin:0;padding-left:20px;font-size:14px">
+          ${missingSkillsHtml}
+        </ul>
+      </div>
+
+      <div style="margin:20px 0;background-color:#eff6ff;border-left:4px solid #3b82f6;padding:12px 16px;border-radius:4px">
+        <h3 style="color:#1e40af;font-size:15px;margin:0 0 8px 0">Top Recommendations</h3>
+        <ol style="margin:0;padding-left:20px;font-size:14px">
+          ${recommendationsHtml}
+        </ol>
+      </div>
+
+      <div style="text-align:center;margin:32px 0 20px 0">
+        <a href="${escapeHtml(appUrl)}/career-match" style="background-color:#2563eb;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;display:inline-block;font-size:15px">View Full Career Match Details</a>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
+      <p style="font-size:12px;color:#94a3b8;text-align:center;margin:0">
+        SkillVista &bull; Empowering Career Readiness through AI
+      </p>
+    </div>
+  `;
+
+  const textContent = `
+SkillVista - Career Match Result Summary
+
+Hello ${name || "there"},
+
+Your Career Match analysis is ready!
+
+Match Score: ${matchPercentage}%
+
+Key Matching Strengths:
+${strengthsText}
+
+Skills to Bridge:
+${missingSkillsText}
+
+Top Recommendations:
+${recommendationsText}
+
+View your full analysis on SkillVista:
+${appUrl}/career-match
+  `.trim();
+
+  const command = new SendEmailCommand({
+    FromEmailAddress: fromEmail,
+    Destination: { ToAddresses: [email] },
+    Content: {
+      Simple: {
+        Subject: {
+          Data: `Your SkillVista Career Match results: ${matchPercentage}% match 🎯`,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: { Data: htmlContent, Charset: "UTF-8" },
+          Text: { Data: textContent, Charset: "UTF-8" },
+        },
+      },
+    },
+  });
+
+  await getSesClient().send(command);
+}

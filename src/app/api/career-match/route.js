@@ -1,19 +1,41 @@
+import "@/lib/polyfills";
 import { getToken } from "next-auth/jwt";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { connectDB } from "@/lib/db";
 import Resume from "@/models/Resume";
+import User from "@/models/User";
 import { getS3Object } from "@/lib/s3";
 import { extractResumeText } from "@/lib/extractResumeText";
+import { getAppSecrets } from "@/lib/secrets";
+import { sendCareerMatchEmail } from "@/lib/email";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 export const runtime = "nodejs";
+
+// Duplicate email protection: 5-minute cooldown per user
+const recentCareerEmails = new Map();
+const COOLDOWN_MS = 5 * 60 * 1000;
 
 export async function POST(req) {
   try {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    if (!process.env.GEMINI_API_KEY) {
-      return Response.json({ error: "AI service is not configured" }, { status: 500 });
+    let nextAuthSecret = process.env.NEXTAUTH_SECRET;
+    let geminiApiKey = process.env.GEMINI_API_KEY;
+
+    if (!nextAuthSecret || !geminiApiKey) {
+      const secrets = await getAppSecrets();
+      nextAuthSecret = nextAuthSecret || secrets.NEXTAUTH_SECRET;
+      geminiApiKey = geminiApiKey || secrets.GEMINI_API_KEY;
+    }
+
+    const token = await getToken({ req, secret: nextAuthSecret });
+    if (!token?.id) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!geminiApiKey) {
+      return Response.json(
+        { error: "AI service is not configured" },
+        { status: 500 },
+      );
     }
 
     const { resumeText, resumeId, jobDescription } = await req.json();
@@ -21,29 +43,70 @@ export async function POST(req) {
 
     if (!resolvedResumeText && resumeId) {
       await connectDB();
-      const resume = await Resume.findOne({ _id: resumeId, userId: token.id }).lean();
-      if (!resume) return Response.json({ error: "Resume not found" }, { status: 404 });
-      const object = await getS3Object(resume.key);
-      if (!object.Body) return Response.json({ error: "Resume file is unavailable" }, { status: 404 });
-      const buffer = Buffer.from(await object.Body.transformToByteArray());
-      resolvedResumeText = await extractResumeText({
-        buffer,
-        contentType: resume.contentType,
-      });
+      const resume = await Resume.findOne({
+        _id: resumeId,
+        userId: token.id,
+      }).lean();
+
+      if (!resume) {
+        return Response.json(
+          { error: "Selected resume could not be found in your account." },
+          { status: 404 },
+        );
+      }
+
+      let buffer;
+      try {
+        const object = await getS3Object(resume.key);
+        if (!object.Body) {
+          return Response.json(
+            { error: "Resume file is currently unavailable in storage." },
+            { status: 404 },
+          );
+        }
+        buffer = Buffer.from(await object.Body.transformToByteArray());
+      } catch (s3Error) {
+        console.error("[api/career-match] S3 read error:", s3Error);
+        return Response.json(
+          {
+            error:
+              "Unable to load the saved resume from cloud storage. Please re-upload your resume or paste the text directly.",
+          },
+          { status: 404 },
+        );
+      }
+
+      try {
+        resolvedResumeText = await extractResumeText({
+          buffer,
+          contentType: resume.contentType,
+        });
+      } catch (extractError) {
+        console.error("[api/career-match] Extract error:", extractError);
+        return Response.json(
+          {
+            error:
+              "Could not extract text from this resume format. Please ensure it is a readable PDF, DOCX, or TXT file.",
+          },
+          { status: 422 },
+        );
+      }
     }
 
     if (!resolvedResumeText.trim() || !jobDescription?.trim()) {
       return Response.json(
-        { error: "Resume text and job description are required" },
+        { error: "Resume text and job description are both required." },
         { status: 400 },
       );
     }
 
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       generationConfig: { responseMimeType: "application/json" },
     });
-    const prompt = `Compare this candidate resume with the job description. Return only JSON:
+
+    const prompt = `Compare this candidate resume with the target job description. Return only a valid JSON object matching this schema:
 {
   "matchPercentage": number,
   "strengths": ["..."],
@@ -51,12 +114,57 @@ export async function POST(req) {
   "keywordsToAdd": ["..."],
   "recommendations": ["..."]
 }
+
 Resume:
 ${resolvedResumeText}
+
 Job description:
 ${jobDescription}`;
-    const result = await model.generateContent(prompt);
-    return Response.json(JSON.parse(result.response.text()));
+
+    const aiResult = await model.generateContent(prompt);
+    const parsedData = JSON.parse(aiResult.response.text());
+
+    // Phase 3: Send summary email asynchronously with duplicate-send protection
+    if (token.email) {
+      const cacheKey = `${token.id}`;
+      const lastSent = recentCareerEmails.get(cacheKey);
+      const now = Date.now();
+
+      if (!lastSent || now - lastSent > COOLDOWN_MS) {
+        recentCareerEmails.set(cacheKey, now);
+
+        // Fetch user's display name
+        connectDB()
+          .then(() => User.findById(token.id).select("name email").lean())
+          .then((user) => {
+            const recipientEmail = user?.email || token.email;
+            const recipientName = user?.name || token.name || "there";
+
+            return sendCareerMatchEmail({
+              name: recipientName,
+              email: recipientEmail,
+              result: parsedData,
+            });
+          })
+          .then(() => {
+            console.log(
+              `[api/career-match] Career match result email dispatched for user ${token.id}`,
+            );
+          })
+          .catch((emailErr) => {
+            console.warn(
+              "[api/career-match] Career match email delivery failed (non-blocking):",
+              emailErr instanceof Error ? emailErr.message : String(emailErr),
+            );
+          });
+      } else {
+        console.log(
+          `[api/career-match] Skipping duplicate email for user ${token.id} (cooldown active)`,
+        );
+      }
+    }
+
+    return Response.json(parsedData);
   } catch (error) {
     console.error("[api/career-match] Error:", {
       message: error instanceof Error ? error.message : String(error),

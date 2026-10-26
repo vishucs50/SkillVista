@@ -64,3 +64,4 @@ export async function getAppSecrets() {
     SES_REGION: process.env.SES_REGION,
   };
 }
+

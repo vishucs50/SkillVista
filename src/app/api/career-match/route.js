@@ -15,6 +15,65 @@ export const runtime = "nodejs";
 const recentCareerEmails = new Map();
 const COOLDOWN_MS = 5 * 60 * 1000;
 
+function parseAiJson(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  let text = raw.trim();
+
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+  text = text.trim();
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    try {
+      const repaired = text.replace(/,\s*([\]}])/g, "$1");
+      return JSON.parse(repaired);
+    } catch {}
+
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const sliced = text
+          .substring(firstBrace, lastBrace + 1)
+          .replace(/,\s*([\]}])/g, "$1");
+        return JSON.parse(sliced);
+      } catch {}
+    }
+    throw err;
+  }
+}
+
+async function generateWithRetry(model, prompt, maxRetries = 2) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (err) {
+      const msg = err?.message || "";
+      const isTransient =
+        msg.includes("503") ||
+        msg.includes("429") ||
+        msg.includes("high demand") ||
+        msg.includes("Service Unavailable") ||
+        msg.includes("ResourceExhausted");
+      if (isTransient && attempt < maxRetries) {
+        attempt++;
+        console.warn(
+          `[api/career-match] Transient error (${msg}), retrying attempt ${attempt}...`,
+        );
+        await new Promise((r) => setTimeout(r, 1200 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export async function POST(req) {
   try {
     let nextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -121,8 +180,8 @@ ${resolvedResumeText}
 Job description:
 ${jobDescription}`;
 
-    const aiResult = await model.generateContent(prompt);
-    const parsedData = JSON.parse(aiResult.response.text());
+    const aiResult = await generateWithRetry(model, prompt);
+    const parsedData = parseAiJson(aiResult.response.text());
 
     // Phase 3: Send summary email asynchronously with duplicate-send protection
     if (token.email) {
@@ -133,7 +192,6 @@ ${jobDescription}`;
       if (!lastSent || now - lastSent > COOLDOWN_MS) {
         recentCareerEmails.set(cacheKey, now);
 
-        // Fetch user's display name
         connectDB()
           .then(() => User.findById(token.id).select("name email").lean())
           .then((user) => {
@@ -157,10 +215,6 @@ ${jobDescription}`;
               emailErr instanceof Error ? emailErr.message : String(emailErr),
             );
           });
-      } else {
-        console.log(
-          `[api/career-match] Skipping duplicate email for user ${token.id} (cooldown active)`,
-        );
       }
     }
 

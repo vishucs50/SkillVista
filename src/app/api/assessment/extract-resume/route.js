@@ -43,6 +43,100 @@ const VALID_PROJECT_EXPERIENCE = [
   "End-to-end projects",
 ];
 
+function parseAiJson(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  let text = raw.trim();
+
+  // Strip markdown code fences
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+  text = text.trim();
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    // 1. Remove trailing commas before } or ]
+    try {
+      const repaired = text.replace(/,\s*([\]}])/g, "$1");
+      return JSON.parse(repaired);
+    } catch {}
+
+    // 2. Extract outermost JSON object { ... }
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const sliced = text
+          .substring(firstBrace, lastBrace + 1)
+          .replace(/,\s*([\]}])/g, "$1");
+        return JSON.parse(sliced);
+      } catch {}
+    }
+
+    // 3. Fallback: Parse individual fields via regex if json is truncated or malformed
+    const result = {};
+
+    const nameMatch = text.match(/"name"\s*:\s*"([^"]+)"/i);
+    if (nameMatch) result.name = nameMatch[1];
+
+    const collegeMatch = text.match(/"college"\s*:\s*"([^"]+)"/i);
+    if (collegeMatch) result.college = collegeMatch[1];
+
+    const degreeMatch = text.match(/"degree"\s*:\s*"([^"]+)"/i);
+    if (degreeMatch) result.degree = degreeMatch[1];
+
+    const yearMatch = text.match(/"year"\s*:\s*"([^"]+)"/i);
+    if (yearMatch) result.year = yearMatch[1];
+
+    const roleMatch = text.match(/"targetRole"\s*:\s*"([^"]+)"/i);
+    if (roleMatch) result.targetRole = roleMatch[1];
+
+    const projMatch = text.match(/"projectExperience"\s*:\s*"([^"]+)"/i);
+    if (projMatch) result.projectExperience = projMatch[1];
+
+    const skillsSection = text.match(/"skills"\s*:\s*\[([\s\S]*?)(\]|$)/i);
+    if (skillsSection) {
+      const skillMatches = [...skillsSection[1].matchAll(/"([^"]+)"/g)];
+      result.skills = skillMatches.map((m) => m[1]);
+    }
+
+    if (Object.keys(result).length > 0) {
+      return result;
+    }
+
+    throw err;
+  }
+}
+
+async function generateWithRetry(model, prompt, maxRetries = 2) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (err) {
+      const msg = err?.message || "";
+      const isTransient =
+        msg.includes("503") ||
+        msg.includes("429") ||
+        msg.includes("high demand") ||
+        msg.includes("Service Unavailable") ||
+        msg.includes("ResourceExhausted");
+      if (isTransient && attempt < maxRetries) {
+        attempt++;
+        console.warn(
+          `[api/assessment/extract-resume] Transient error (${msg}), retrying attempt ${attempt}...`,
+        );
+        await new Promise((r) => setTimeout(r, 1200 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 export async function POST(req) {
   try {
     let nextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -90,12 +184,12 @@ export async function POST(req) {
       } catch (extractErr) {
         console.error("[api/assessment/extract-resume] Extract error:", extractErr);
         return Response.json(
-          { error: "Could not read text from this file. Please verify it is a valid PDF, DOCX, or TXT document." },
+          { error: "Could not read text from this file. Please verify it is a readable PDF, DOCX, or TXT document." },
           { status: 422 },
         );
       }
 
-      // Persist resume to S3 and MongoDB so it's also available for Career Match
+      // Persist resume to S3 and MongoDB
       try {
         await connectDB();
         const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -159,7 +253,7 @@ export async function POST(req) {
       return Response.json(
         {
           error:
-            "The resume text appears to be empty or too short. Please upload a clear text or standard PDF resume.",
+            "The resume text appears to be empty or unreadable. Please upload a clear text or standard PDF resume.",
         },
         { status: 422 },
       );
@@ -188,8 +282,12 @@ Return only valid JSON matching this exact structure:
 Resume content:
 ${extractedText.substring(0, 8000)}`;
 
-    const aiResult = await model.generateContent(prompt);
-    const parsed = JSON.parse(aiResult.response.text());
+    const aiResult = await generateWithRetry(model, prompt);
+    const parsed = parseAiJson(aiResult.response.text());
+
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Could not parse AI response into structured data");
+    }
 
     // Sanitize values against allowed options
     const degree = VALID_DEGREES.includes(parsed.degree)
@@ -242,4 +340,3 @@ ${extractedText.substring(0, 8000)}`;
     );
   }
 }
-

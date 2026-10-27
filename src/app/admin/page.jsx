@@ -360,6 +360,22 @@ export default function AdminPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {(data?.services || []).map((srv) => {
                   const isHealthy = srv.status === "healthy" || srv.status === "connected";
+                  const isCostSaved = srv.status === "cost_optimized";
+
+                  let badgeClass = "bg-amber-500/10 text-amber-500";
+                  let dotClass = "bg-amber-500";
+                  let statusText = "Fallback";
+
+                  if (isHealthy) {
+                    badgeClass = "bg-emerald-500/10 text-emerald-500";
+                    dotClass = "bg-emerald-500";
+                    statusText = "Operational";
+                  } else if (isCostSaved) {
+                    badgeClass = "bg-cyan-500/10 text-cyan-500";
+                    dotClass = "bg-cyan-500";
+                    statusText = "Paused ($0/mo)";
+                  }
+
                   return (
                     <div
                       key={srv.id}
@@ -371,14 +387,10 @@ export default function AdminPage() {
                           <span className="text-xs text-muted-foreground">{srv.type}</span>
                         </div>
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            isHealthy
-                              ? "bg-emerald-500/10 text-emerald-500"
-                              : "bg-amber-500/10 text-amber-500"
-                          }`}
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}
                         >
-                          <span className={`size-1.5 rounded-full ${isHealthy ? "bg-emerald-500" : "bg-amber-500"}`} />
-                          {isHealthy ? "Operational" : "Fallback"}
+                          <span className={`size-1.5 rounded-full ${dotClass}`} />
+                          {statusText}
                         </span>
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">

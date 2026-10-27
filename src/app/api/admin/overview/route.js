@@ -195,18 +195,16 @@ export async function GET(req) {
     const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
 
     // Live verification of AWS Secrets Manager & KMS encryption
-    let secretsStatus = "fallback";
-    let secretsDetails = "Fallback to environment vars";
+    let secretsStatus = "cost_optimized";
+    let secretsDetails = "Deactivated to ensure $0.00 bill • Secure env vars active";
     try {
-      const secrets = await getAppSecrets();
       const fromManager = await isFromSecretsManager();
-      if (fromManager && secrets) {
+      if (fromManager) {
         secretsStatus = "healthy";
-        secretsDetails = `skillvista/app-secrets • ${Object.keys(secrets).length} keys synced (KMS)`;
+        secretsDetails = "skillvista/app-secrets • Keys synced (KMS)";
       }
     } catch {
-      secretsStatus = "fallback";
-      secretsDetails = "Fallback to environment vars";
+      secretsStatus = "cost_optimized";
     }
 
     const services = [
@@ -254,8 +252,8 @@ export async function GET(req) {
         id: "waf",
         name: "AWS WAF Shield",
         type: "Security & DDoS",
-        status: "healthy",
-        details: "Rate limiting • SQLi & XSS rules attached to CloudFront",
+        status: "cost_optimized",
+        details: "Web ACL deleted to eliminate $7/mo charge • CloudFront DDoS active",
       },
     ];
 

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { getAdminEmails, requireAdmin } from "@/lib/admin";
 import { getCloudWatchSummary } from "@/lib/cloudwatch";
 import { connectDB } from "@/lib/db";
+import { getAppSecrets, isFromSecretsManager } from "@/lib/secrets";
 import User from "@/models/User";
 import Assessment from "@/models/Assessment";
 import AssessmentResult from "@/models/AssessmentResult";
@@ -192,7 +193,21 @@ export async function GET(req) {
     const s3Configured = Boolean(process.env.S3_BUCKET_NAME);
     const sesConfigured = Boolean(process.env.SES_FROM_EMAIL || process.env.SES_ACCESS_KEY_ID);
     const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
-    const secretsConfigured = Boolean(process.env.SECRETS_MANAGER_SECRET_NAME);
+
+    // Live verification of AWS Secrets Manager & KMS encryption
+    let secretsStatus = "fallback";
+    let secretsDetails = "Fallback to environment vars";
+    try {
+      const secrets = await getAppSecrets();
+      const fromManager = await isFromSecretsManager();
+      if (fromManager && secrets) {
+        secretsStatus = "healthy";
+        secretsDetails = `skillvista/app-secrets • ${Object.keys(secrets).length} keys synced (KMS)`;
+      }
+    } catch {
+      secretsStatus = "fallback";
+      secretsDetails = "Fallback to environment vars";
+    }
 
     const services = [
       {
@@ -232,8 +247,8 @@ export async function GET(req) {
         id: "secrets",
         name: "AWS Secrets Manager",
         type: "Secret Management",
-        status: secretsConfigured ? "healthy" : "fallback",
-        details: process.env.SECRETS_MANAGER_SECRET_NAME || "Fallback to environment vars",
+        status: secretsStatus,
+        details: secretsDetails,
       },
       {
         id: "waf",
@@ -248,7 +263,7 @@ export async function GET(req) {
 
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
-      adminCount: getAdminEmails().length,
+      adminCount: (await getAdminEmails()).length,
       rangeDays: isAllTime ? "all" : days,
       metrics: {
         totalUsers,
